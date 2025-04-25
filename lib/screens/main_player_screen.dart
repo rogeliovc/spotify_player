@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/player_provider.dart';
 import 'task_manager.dart';
 import '../models/spotify_track.dart';
+import '../models/song_model.dart';
 import '../models/spotify_device.dart';
 import 'package:http/http.dart' as http;
 import 'settings_screen.dart';
 import 'dart:convert';
 import '../services/auth_service.dart';
+import 'mini_player.dart';
 
 class MainPlayerScreen extends StatefulWidget {
   @override
@@ -156,7 +160,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,12 +201,13 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              if (_selectedTab == 1)
-                _buildHomeContent()
-              else if (_selectedTab == 2)
-                _buildTaskManager()
-              else
-                _buildPlayerContent(),
+              Expanded(
+                child: _selectedTab == 1
+                  ? _buildHomeContent()
+                  : _selectedTab == 2
+                    ? _buildTaskManager()
+                    : _buildPlayerContent(),
+              ),
             ],
           ),
         ),
@@ -296,6 +301,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
 
 
   Widget _buildPlayerContent() {
+    // Lista de canciones top
     return FutureBuilder<List<SpotifyTrack>>(
       future: getSpotifyTracks(context),
       builder: (context, snapshot) {
@@ -307,68 +313,59 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
           return const Center(child: Text('No hay canciones para mostrar', style: TextStyle(color: Colors.white)));
         }
         final tracks = snapshot.data!;
-        return ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: tracks.length,
-          separatorBuilder: (_, __) => const Divider(color: Colors.white24, height: 1),
-          itemBuilder: (context, index) {
-            final track = tracks[index];
-            return ListTile(
-              leading: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(track.albumArtUrl, width: 48, height: 48, fit: BoxFit.cover),
-              ),
-              title: Text(track.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              subtitle: Text(track.artist, style: const TextStyle(color: Colors.white70)),
-              trailing: Text(track.duration, style: const TextStyle(color: Color(0xFFe0c36a))),
-              onTap: () async {
-                final auth = AuthService();
-                final token = await auth.getAccessToken();
-                if (token == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('No hay sesión activa de Spotify.')),
-                  );
-                  return;
-                }
-                final String trackUri = track.uri;
-                if (trackUri.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('No se encontró el URI de la canción.')),
-                  );
-                  return;
-                }
-                final response = await http.put(
-                  Uri.parse('https://api.spotify.com/v1/me/player/play'),
-                  headers: {
-                    'Authorization': 'Bearer $token',
-                    'Content-Type': 'application/json',
-                  },
-                  body: json.encode({
-                    'uris': [trackUri],
-                  }),
-                );
-                if (response.statusCode == 204) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Reproduciendo: ${track.title}')),
-                  );
-                } else if (response.statusCode == 404) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('No se pudo reproducir la canción (404): No hay dispositivo activo de Spotify. Abre la app de Spotify en tu teléfono o PC y vuelve a intentar.'),
+        return SizedBox.expand(
+          child: Stack(
+            children: [
+              ListView.separated(
+                padding: const EdgeInsets.only(bottom: 120),
+                itemCount: tracks.length,
+                separatorBuilder: (_, __) => const Divider(color: Colors.white24, height: 1),
+                itemBuilder: (context, index) {
+                  final track = tracks[index];
+                  return ListTile(
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(track.albumArtUrl, width: 48, height: 48, fit: BoxFit.cover),
                     ),
+                    title: Text(track.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    subtitle: Text(track.artist, style: const TextStyle(color: Colors.white70)),
+                    trailing: Text(track.duration, style: const TextStyle(color: Color(0xFFe0c36a))),
+                    onTap: () async {
+                      final player = Provider.of<PlayerProvider>(context, listen: false);
+                      // Reproducir la canción directamente
+                      await player.playSong(Song(
+                        id: track.uri.split(':').last,
+                        title: track.title,
+                        artist: track.artist,
+                        album: '',
+                        albumArtUrl: track.albumArtUrl,
+                        durationMs: _parseDuration(track.duration),
+                      ));
+                    },
                   );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('No se pudo reproducir la canción (${response.statusCode})')),
-                  );
-                }
-              },
-            );
-          },
+                },
+              ),
+              // Mini Player Expandible
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: MiniPlayer(),
+              ),
+            ],
+          ),
         );
       },
     );
+  }
+
+  int _parseDuration(String durationString) {
+    // Convierte "mm:ss" a milisegundos
+    final parts = durationString.split(':');
+    if (parts.length != 2) return 0;
+    final minutes = int.tryParse(parts[0]) ?? 0;
+    final seconds = int.tryParse(parts[1]) ?? 0;
+    return (minutes * 60 + seconds) * 1000;
   }
 
   Future<List<SpotifyTrack>> getSpotifyTracks(BuildContext context) async {

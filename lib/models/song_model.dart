@@ -3,17 +3,22 @@ class Song {
   final String title;
   final String artist;
   final String album;
-  final String imageUrl;
-  final int duration;
+  final String albumArtUrl;
+  final int durationMs;
+  int positionMs;
 
   Song({
     required this.id,
     required this.title,
     required this.artist,
     required this.album,
-    required this.imageUrl,
-    required this.duration,
+    required this.albumArtUrl,
+    required this.durationMs,
+    this.positionMs = 0,
   });
+
+  String get imageUrl => albumArtUrl;
+  int get duration => durationMs ~/ 1000;
 
   factory Song.fromJson(Map<String, dynamic> json) {
     return Song(
@@ -21,8 +26,9 @@ class Song {
       title: json['name'],
       artist: json['artists'][0]['name'],
       album: json['album']['name'],
-      imageUrl: json['album']['images'][0]['url'],
-      duration: json['duration_ms'] ~/ 1000,
+      albumArtUrl: json['album']['images'][0]['url'],
+      durationMs: json['duration_ms'],
+      positionMs: 0,
     );
   }
 }

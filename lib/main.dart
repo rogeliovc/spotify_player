@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'providers/player_provider.dart';
 
 
 
@@ -18,16 +19,32 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => TaskProvider(),
-      child: MaterialApp(
-        title: 'Spotify Player',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
-        home: const SplashDecider(),
-      ),
+    return FutureBuilder<String?>(
+      future: AuthService().getAccessToken(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const MaterialApp(
+            home: Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+        final token = snapshot.data ?? '';
+        return MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => TaskProvider()),
+            ChangeNotifierProvider(create: (_) => PlayerProvider(accessToken: token)),
+          ],
+          child: MaterialApp(
+            title: 'Spotify Player',
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+              useMaterial3: true,
+            ),
+            home: const SplashDecider(),
+          ),
+        );
+      },
     );
   }
 }

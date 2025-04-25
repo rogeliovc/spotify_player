@@ -45,7 +45,7 @@ class PlaylistWidget extends StatelessWidget {
                 ? const Icon(Icons.play_circle, color: Colors.green)
                 : null,
             onTap: () {
-              provider.setCurrentSong(song);
+              provider.playSong(song);
             },
           );
         },
