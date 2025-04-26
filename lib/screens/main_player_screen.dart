@@ -333,14 +333,17 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                     onTap: () async {
                       final player = Provider.of<PlayerProvider>(context, listen: false);
                       // Reproducir la canción directamente
-                      await player.playSong(Song(
-                        id: track.uri.split(':').last,
-                        title: track.title,
-                        artist: track.artist,
-                        album: '',
-                        albumArtUrl: track.albumArtUrl,
-                        durationMs: _parseDuration(track.duration),
-                      ));
+                      await player.playSongFromList(
+  tracks.map((track) => Song(
+    id: track.uri.split(':').last,
+    title: track.title,
+    artist: track.artist,
+    album: '',
+    albumArtUrl: track.albumArtUrl,
+    durationMs: _parseDuration(track.duration),
+  )).toList(),
+  index,
+);
                     },
                   );
                 },

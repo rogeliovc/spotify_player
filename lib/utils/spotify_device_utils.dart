@@ -13,11 +13,23 @@ Future<String?> getActiveDeviceId(String accessToken) async {
   if (response.statusCode == 200) {
     final data = json.decode(response.body);
     final devices = data['devices'] as List<dynamic>;
+    // LOG: Mostrar la lista de dispositivos
+    print('SPOTIFY DEVICES:');
+    for (var d in devices) {
+      print('  - ${d['name']} (id: ${d['id']}, is_active: ${d['is_active']}, type: ${d['type']})');
+    }
     final active = devices.firstWhere(
       (d) => d['is_active'] == true,
       orElse: () => null,
     );
-    return active != null ? active['id'] as String : null;
+    if (active != null) {
+      print('DISPOSITIVO ACTIVO SELECCIONADO: ${active['name']} (id: ${active['id']})');
+      return active['id'] as String;
+    } else {
+      print('NO SE ENCONTRÓ DISPOSITIVO ACTIVO');
+    }
+  } else {
+    print('Error al obtener dispositivos: ${response.statusCode} ${response.body}');
   }
   return null;
 }

@@ -7,17 +7,83 @@ import '../models/song_model.dart';
 import 'dart:async';
 
 class PlayerProvider extends ChangeNotifier {
+  bool isProcessing = false;
   final String accessToken;
   Song? currentSong;
   Timer? _positionTimer;
+  bool _freezeTimerWhileSeeking = false;
+  Timer? _syncTimer;
+
+  void _startSyncTimer() {
+    _syncTimer?.cancel();
+    _syncTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      _syncWithSpotify();
+    });
+  }
+
+  Future<void> _syncWithSpotify() async {
+    if (currentSong == null) return;
+    try {
+      final urlGet = Uri.parse('https://api.spotify.com/v1/me/player/currently-playing');
+      final responseGet = await http.get(
+        urlGet,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+        },
+      );
+      if (responseGet.statusCode == 200) {
+        final data = jsonDecode(responseGet.body);
+        final position = data['progress_ms'] ?? 0;
+        final isPlayingSpotify = data['is_playing'] ?? false;
+        final songId = data['item']?['id'];
+        final duration = data['item']?['duration_ms'] ?? 0;
+        // Si la canción cambió en Spotify, fuerza el cambio local
+        if (songId != null && currentSong!.id != songId) {
+          // Busca la nueva canción en la playlist
+          final idx = playlist.indexWhere((s) => s.id == songId);
+          if (idx != -1) {
+            await playSongFromList(playlist, idx);
+            return;
+          }
+        }
+        // Si la canción terminó en Spotify pero el timer local no lo detectó
+        if (position >= duration - 500 && !isPlayingSpotify) {
+          if (repeatSong) {
+            await seek(0);
+            await resume();
+          } else {
+            await next();
+          }
+          return;
+        }
+        // Corrige desfase de posición
+        if ((currentSong!.positionMs - position).abs() > 1500) {
+          currentSong!.positionMs = position;
+          notifyListeners();
+        }
+      }
+    } catch (_) {}
+  }
+
   List<Song> playlist = [];
+  int currentIndex = 0;
   bool isPlaying = false;
+  bool repeatSong = false; // Nuevo flag para repetir la canción actual
   double _volume = 0.5;
   double get volume => _volume;
 
   PlayerProvider({required this.accessToken});
 
-  Future<void> playSong(Song song, {void Function(String)? onError}) async {
+  Future<void> playSongFromList(List<Song> songs, int index, {void Function(String)? onError}) async {
+  print('[playSongFromList] Llamado con index=$index, songs.length=${songs.length}');
+    if (songs.isEmpty || index < 0 || index >= songs.length) {
+      if (onError != null) onError('Índice o lista inválida.');
+      return;
+    }
+    playlist = List<Song>.from(songs);
+    currentIndex = index;
+    print('[playSongFromList] playlist actualizada. currentIndex=$currentIndex, canción=${playlist[currentIndex].title}');
+    final song = songs[index];
     await pause();
     _stopPositionTimer();
     final deviceId = await getActiveDeviceId(accessToken);
@@ -30,6 +96,7 @@ class PlayerProvider extends ChangeNotifier {
     // Transfiere el playback al dispositivo antes de reproducir
     await transferPlaybackToDevice(accessToken, deviceId);
     final url = Uri.parse('https://api.spotify.com/v1/me/player/play?device_id=$deviceId');
+    final uris = songs.map((s) => 'spotify:track:${s.id}').toList();
     final response = await http.put(
       url,
       headers: {
@@ -37,13 +104,14 @@ class PlayerProvider extends ChangeNotifier {
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
-        "uris": ["spotify:track:${song.id}"]
+        "uris": uris,
+        "offset": {"position": index}
       }),
     );
-    if (response.statusCode == 204) {
+    if (response.statusCode == 200 || response.statusCode == 204) {
       currentSong = song;
+      currentSong!.positionMs = 0; // Reinicia la barra de progreso
       isPlaying = true;
-      // Espera un poco y sincroniza la posición real desde Spotify
       await Future.delayed(const Duration(milliseconds: 300));
       try {
         final urlGet = Uri.parse('https://api.spotify.com/v1/me/player/currently-playing');
@@ -68,13 +136,22 @@ class PlayerProvider extends ChangeNotifier {
         onError('No hay ningún dispositivo de reproducción activo.');
       }
     } else {
-      throw Exception('Error al reproducir la canción: ${response.body}');
+      throw Exception('Error al reproducir la canción: {response.body}');
+    }
+  }
+
+  // Compatibilidad con llamada antigua
+  Future<void> playSong(Song song, {void Function(String)? onError}) async {
+    final idx = playlist.indexWhere((s) => s.id == song.id);
+    if (idx != -1) {
+      await playSongFromList(playlist, idx, onError: onError);
+    } else {
+      await playSongFromList([song], 0, onError: onError);
     }
   }
 
   Future<void> pause() async {
-    _stopPositionTimer();
-    // Obtener la posición real desde Spotify antes de pausar
+    // Obtener la posición real desde Spotify ANTES de pausar
     try {
       final urlGet = Uri.parse('https://api.spotify.com/v1/me/player/currently-playing');
       final responseGet = await http.get(
@@ -88,9 +165,18 @@ class PlayerProvider extends ChangeNotifier {
         final position = data['progress_ms'] ?? 0;
         if (currentSong != null) {
           currentSong!.positionMs = position;
+          print('[pause] Posición guardada al pausar (pre-pause): $position ms');
         }
       }
     } catch (_) {}
+
+    if (isProcessing) {
+      print('[pause] Ignorado: acción en curso.');
+      return;
+    }
+    isProcessing = true;
+    print('[pause] Intentando pausar.');
+    _stopPositionTimer();
 
     final url = Uri.parse('https://api.spotify.com/v1/me/player/pause');
     final response = await http.put(
@@ -101,52 +187,59 @@ class PlayerProvider extends ChangeNotifier {
     );
     // Siempre actualiza el estado y notifica
     isPlaying = false;
+    isProcessing = false;
     notifyListeners();
     // Ignorar cualquier otro error para no bloquear la reproducción
   }
+// --- FIN DEL METODO PAUSE ---
+
 
   /// Reproduce la siguiente canción en la cola de Spotify.
   Future<void> next({void Function(String)? onError}) async {
-    final url = Uri.parse('https://api.spotify.com/v1/me/player/next');
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-      },
-    );
-    if (response.statusCode == 204) {
-      // El estado se actualizará al obtener la canción actual
-      notifyListeners();
-    } else if (response.statusCode == 404 || response.statusCode == 403) {
-      if (onError != null) {
-        onError('No hay ningún dispositivo de reproducción activo. Abre la app de música en tu dispositivo y reproduce una canción manualmente antes de usar Sincronía.');
-      }
-    } else {
-      if (onError != null) {
-        onError('No se pudo avanzar a la siguiente canción. Intenta de nuevo o selecciona otra pista.');
-      }
-      // No lanzar excepción para evitar bloquear la UI
+  print('[next] playlist.length=${playlist.length}, currentIndex=$currentIndex');
+    if (isProcessing) {
+      print('[next] Ignorado: acción en curso.');
+      return;
     }
+    isProcessing = true;
+    if (playlist.isEmpty) {
+      if (onError != null) onError('No hay playlist cargada.');
+      isProcessing = false;
+      return;
+    }
+    int nextIndex = currentIndex + 1;
+    if (nextIndex >= playlist.length) {
+      if (onError != null) onError('No hay siguiente canción en la playlist.');
+      isProcessing = false;
+      return;
+    }
+    print('[next] Avanzando a nextIndex=$nextIndex, canción=${playlist[nextIndex].title}');
+  await playSongFromList(playlist, nextIndex, onError: onError);
+  isProcessing = false;
   }
 
   /// Retrocede a la canción anterior en la cola de Spotify.
   Future<void> previous({void Function(String)? onError}) async {
-    final url = Uri.parse('https://api.spotify.com/v1/me/player/previous');
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-      },
-    );
-    if (response.statusCode == 204) {
-      notifyListeners();
-    } else if (response.statusCode == 404 || response.statusCode == 403) {
-      if (onError != null) {
-        onError('No hay ningún dispositivo de reproducción activo. Abre la app de música en tu dispositivo y reproduce una canción manualmente antes de usar Sincronía.');
-      }
-    } else {
-      throw Exception('Error al retroceder a la canción anterior: ${response.body}');
+  print('[previous] playlist.length=${playlist.length}, currentIndex=$currentIndex');
+    if (isProcessing) {
+      print('[previous] Ignorado: acción en curso.');
+      return;
     }
+    isProcessing = true;
+    if (playlist.isEmpty) {
+      if (onError != null) onError('No hay playlist cargada.');
+      isProcessing = false;
+      return;
+    }
+    int prevIndex = currentIndex - 1;
+    if (prevIndex < 0) {
+      if (onError != null) onError('No hay canción anterior en la playlist.');
+      isProcessing = false;
+      return;
+    }
+    print('[previous] Retrocediendo a prevIndex=$prevIndex, canción=${playlist[prevIndex].title}');
+  await playSongFromList(playlist, prevIndex, onError: onError);
+  isProcessing = false;
   }
 
   /// Cambia el volumen de reproducción (0.0 a 1.0).
@@ -160,7 +253,7 @@ class PlayerProvider extends ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
       },
     );
-    if (response.statusCode == 204) {
+    if (response.statusCode == 200 || response.statusCode == 204) {
       // Sincroniza la posición real después del seek
       try {
         final urlGet = Uri.parse('https://api.spotify.com/v1/me/player/currently-playing');
@@ -186,7 +279,21 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   /// Hace seek a una posición específica en la canción actual (en milisegundos).
+  bool _seekInProgress = false;
+  int? _pendingSeekMs;
   Future<void> seek(int positionMs, {void Function(String)? onError}) async {
+    if (_seekInProgress) {
+      _pendingSeekMs = positionMs;
+      return;
+    }
+    _seekInProgress = true;
+    _freezeTimerWhileSeeking = true;
+    _stopPositionTimer();
+    // Actualiza localmente para feedback inmediato
+    if (currentSong != null) {
+      currentSong!.positionMs = positionMs;
+      notifyListeners();
+    }
     final url = Uri.parse('https://api.spotify.com/v1/me/player/seek?position_ms=$positionMs');
     final response = await http.put(
       url,
@@ -194,7 +301,7 @@ class PlayerProvider extends ChangeNotifier {
         'Authorization': 'Bearer $accessToken',
       },
     );
-    if (response.statusCode == 204) {
+    if (response.statusCode == 200 || response.statusCode == 204) {
       // Sincroniza la posición real después del seek
       try {
         final urlGet = Uri.parse('https://api.spotify.com/v1/me/player/currently-playing');
@@ -219,25 +326,41 @@ class PlayerProvider extends ChangeNotifier {
       if (onError != null) {
         onError('Error al hacer seek: ${response.body}');
       }
-      // No hagas nada más, ignora el error para no romper la app
     }
-  }
-
-
-  void setCurrentSong(Song song) {
-    _stopPositionTimer();
-    currentSong = song;
+    _seekInProgress = false;
+    _freezeTimerWhileSeeking = false;
+    // Si hay un seek pendiente, ejecútalo ahora
+    if (_pendingSeekMs != null) {
+      final nextSeek = _pendingSeekMs!;
+      _pendingSeekMs = null;
+      await seek(nextSeek, onError: onError);
+      return;
+    }
+    // Si el seek fue cerca del final, fuerza sincronización tras 1s
+    if (currentSong != null &&
+        (currentSong!.durationMs - currentSong!.positionMs) < 2000) {
+      Future.delayed(const Duration(seconds: 1), _syncWithSpotify);
+    }
+    _startPositionTimer();
+    // No hagas nada más, ignora el error para no romper la app
     notifyListeners();
   }
 
   /// Reanuda la reproducción desde la posición actual de la canción
   Future<void> resume({void Function(String)? onError}) async {
+  if (isProcessing) {
+    print('[resume] Ignorado: acción en curso.');
+    return;
+  }
+  isProcessing = true;
+  print('[resume] Intentando reanudar. Posición guardada: \\${currentSong?.positionMs} ms');
     if (currentSong == null) return;
     final deviceId = await getActiveDeviceId(accessToken);
     if (deviceId == null) {
       if (onError != null) {
         onError('No hay ningún dispositivo de reproducción activo.');
       }
+      isProcessing = false;
       return;
     }
     // Reanudar playback sin cambiar la canción
@@ -250,16 +373,37 @@ class PlayerProvider extends ChangeNotifier {
       },
       body: jsonEncode({}),
     );
-    if (response.statusCode == 204) {
+    if (response.statusCode == 200 || response.statusCode == 204) {
       // Espera un poco antes de hacer seek
-      await Future.delayed(const Duration(milliseconds: 300));
-      // Hacer seek a la posición guardada SOLO si es válida
-      if (currentSong!.positionMs > 0 && currentSong!.positionMs < currentSong!.durationMs) {
+      await Future.delayed(const Duration(milliseconds: 800));
+      // Sincroniza la posición real antes de decidir si hacer seek
+      int? positionReal;
+      try {
+        final urlGet = Uri.parse('https://api.spotify.com/v1/me/player/currently-playing');
+        final responseGet = await http.get(
+          urlGet,
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+          },
+        );
+        if (responseGet.statusCode == 200) {
+          final data = jsonDecode(responseGet.body);
+          positionReal = data['progress_ms'] ?? 0;
+        }
+      } catch (_) {}
+      final positionGuardada = currentSong!.positionMs;
+      final diff = positionReal != null ? (positionGuardada - positionReal).abs() : 9999;
+      print('[resume] Posición real: $positionReal ms, guardada: $positionGuardada ms, diff: $diff ms');
+      // Solo haz seek si la real es MENOR que la guardada y la diferencia es significativa
+      if (positionGuardada > 0 && positionGuardada < currentSong!.durationMs && positionReal != null && positionReal < positionGuardada && diff > 2500) {
         try {
-          await seek(currentSong!.positionMs);
+          print('[resume] Haciendo seek a: $positionGuardada ms');
+          await seek(positionGuardada);
         } catch (_) {
           // Si el seek falla, solo ignóralo y sigue
         }
+      } else {
+        print('[resume] No se hace seek porque diff <= 2500 ms o la real es mayor que la guardada');
       }
       // Sincroniza la posición real después del seek
       try {
@@ -279,24 +423,33 @@ class PlayerProvider extends ChangeNotifier {
         }
       } catch (_) {}
       isPlaying = true;
+      isProcessing = false;
       notifyListeners();
       _startPositionTimer();
     } else {
       if (onError != null) {
         onError('No se pudo reanudar la reproducción.');
       }
+      isProcessing = false;
     }
   }
 
   void _startPositionTimer() {
+    _startSyncTimer();
     _positionTimer?.cancel();
     if (currentSong == null) return;
-    _positionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!isPlaying || currentSong == null) return;
+    _positionTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (!isPlaying || currentSong == null || _freezeTimerWhileSeeking) return;
       if (currentSong!.positionMs + 1000 >= currentSong!.durationMs) {
         currentSong!.positionMs = currentSong!.durationMs;
-        _stopPositionTimer();
         notifyListeners();
+        if (repeatSong) {
+          // Reinicia la canción desde el inicio
+          await seek(0);
+          await resume();
+        } else {
+          await next();
+        }
         return;
       }
       currentSong!.positionMs += 1000;
@@ -307,5 +460,7 @@ class PlayerProvider extends ChangeNotifier {
   void _stopPositionTimer() {
     _positionTimer?.cancel();
     _positionTimer = null;
+    _syncTimer?.cancel();
+    _syncTimer = null;
   }
 }
