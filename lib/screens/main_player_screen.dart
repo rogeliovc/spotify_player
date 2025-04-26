@@ -10,6 +10,8 @@ import 'settings_screen.dart';
 import 'dart:convert';
 import '../services/auth_service.dart';
 import 'mini_player.dart';
+import '../utils/spotify_search.dart';
+import '../widgets/spotify_search_field.dart';
 
 class MainPlayerScreen extends StatefulWidget {
   @override
@@ -132,6 +134,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Provee el context global al PlayerProvider para navegación segura
+    final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
+    playerProvider.setContext(context);
     return Scaffold(
       backgroundColor: const Color(0xFF0E1928),
       appBar: AppBar(
@@ -159,72 +164,358 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF182B45),
-                    borderRadius: BorderRadius.circular(30),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF182B45),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.music_note, color: _selectedTab == 0 ? Colors.white : Colors.white.withOpacity(0.6)),
+                            onPressed: () => setState(() => _selectedTab = 0),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: _selectedTab == 1 ? Colors.white : Colors.transparent,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                            child: IconButton(
+                              icon: Icon(Icons.home, color: _selectedTab == 1 ? const Color(0xFF182B45) : Colors.white.withOpacity(0.6)),
+                              onPressed: () => setState(() => _selectedTab = 1),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(Icons.calendar_today, color: _selectedTab == 2 ? Colors.white : Colors.white.withOpacity(0.6)),
+                            onPressed: () => setState(() => _selectedTab = 2),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.music_note, color: _selectedTab == 0 ? Colors.white : Colors.white.withOpacity(0.6)),
-                        onPressed: () => setState(() => _selectedTab = 0),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: _selectedTab == 1 ? Colors.white : Colors.transparent,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-                        child: IconButton(
-                          icon: Icon(Icons.home, color: _selectedTab == 1 ? const Color(0xFF182B45) : Colors.white.withOpacity(0.6)),
-                          onPressed: () => setState(() => _selectedTab = 1),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(Icons.calendar_today, color: _selectedTab == 2 ? Colors.white : Colors.white.withOpacity(0.6)),
-                        onPressed: () => setState(() => _selectedTab = 2),
-                      ),
-                    ],
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: _selectedTab == 1
+                      ? _buildHomeContent()
+                      : _selectedTab == 2
+                        ? _buildTaskManager()
+                        : _buildPlayerContent(),
                   ),
-                ),
+                ],
               ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: _selectedTab == 1
-                  ? _buildHomeContent()
-                  : _selectedTab == 2
-                    ? _buildTaskManager()
-                    : _buildPlayerContent(),
-              ),
-            ],
+            ),
           ),
-        ),
+          // MiniPlayer siempre visible
+          MiniPlayer(),
+        ],
       ),
     );
   }
 
   Widget _buildHomeContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Aquí va el contenido principal de inicio (puedes dejar el calendario, playlists, etc)
-        const Text('Pantalla de inicio', style: TextStyle(color: Colors.white, fontSize: 20)),
-        const SizedBox(height: 24),
-      ],
+    return Center(
+      child: Text(
+        '¡Bienvenido a Sincronía! Elige una sección para explorar tu música.',
+        style: TextStyle(color: Colors.white, fontSize: 20),
+        textAlign: TextAlign.center,
+      ),
     );
   }
+
+  SliverToBoxAdapter _buildSectionTitle(String title) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Text(
+          title,
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  SliverToBoxAdapter _buildHorizontalTrackList(Future<List<SpotifyTrack>> futureTracks) {
+    return SliverToBoxAdapter(
+      child: FutureBuilder<List<SpotifyTrack>>(
+        future: futureTracks,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return SizedBox(
+              height: 180,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snapshot.hasError) {
+            return SizedBox(
+              height: 180,
+              child: Center(
+                child: Text('Error: \\n${snapshot.error}', style: TextStyle(color: Colors.red[200])),
+              ),
+            );
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return SizedBox(height: 180, child: Center(child: Text('Sin canciones', style: TextStyle(color: Colors.white70))));
+          }
+          final tracks = snapshot.data!;
+          return SizedBox(
+            height: 180,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: tracks.length,
+              separatorBuilder: (_, __) => SizedBox(width: 16),
+              itemBuilder: (context, index) {
+                final track = tracks[index];
+                return _buildTrackCard(track);
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTrackCard(SpotifyTrack track) {
+    return GestureDetector(
+      onTap: () async {
+        final player = Provider.of<PlayerProvider>(context, listen: false);
+        await player.playSongFromList([
+          Song(
+            id: track.uri.split(':').last,
+            title: track.title,
+            artist: track.artist,
+            album: '',
+            albumArtUrl: track.albumArtUrl,
+            durationMs: _parseDuration(track.duration),
+          )
+        ], 0);
+      },
+      child: Container(
+        width: 140,
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                track.albumArtUrl,
+                width: 140,
+                height: 140,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 140,
+                  height: 140,
+                  color: Colors.grey[900],
+                  child: Icon(Icons.music_note, color: Colors.white38, size: 48),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.55),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      track.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                    Text(
+                      track.artist,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: Text(
+                        track.duration,
+                        style: const TextStyle(color: Color(0xFFe0c36a), fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _parseDuration(String durationString) {
+    // Convierte "mm:ss" a milisegundos
+    final parts = durationString.split(':');
+    if (parts.length != 2) return 0;
+    final minutes = int.tryParse(parts[0]) ?? 0;
+    final seconds = int.tryParse(parts[1]) ?? 0;
+    return (minutes * 60 + seconds) * 1000;
+  }
+
+  String _formatDuration(Duration d) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(d.inMinutes.remainder(60));
+    final seconds = twoDigits(d.inSeconds.remainder(60));
+    return '$minutes:$seconds';
+  }
+
+  // Favoritas: Top tracks
+  Future<List<SpotifyTrack>> _getFavoriteTracksFuture() async => _fetchTopTracks();
+  // Reproducidas recientemente
+  Future<List<SpotifyTrack>> _getRecentlyPlayedFuture() async => _fetchRecentlyPlayed();
+  // Nuevos lanzamientos
+  Future<List<SpotifyTrack>> _getNewReleasesFuture() async => _fetchNewReleases();
+  // Recomendaciones
+  Future<List<SpotifyTrack>> _getRecommendationsFuture() async => _fetchRecommendations();
+
+  Future<List<SpotifyTrack>> _fetchTopTracks() async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    if (token == null) throw 'No se encontró el token de sesión de Spotify.';
+    final url = Uri.parse('https://api.spotify.com/v1/me/top/tracks?limit=20');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200) throw 'Error al obtener top tracks: \\n${response.body}';
+    final data = json.decode(response.body);
+    final items = data['items'] as List<dynamic>;
+    return items.map(_spotifyTrackFromItem).toList();
+  }
+
+  Future<List<SpotifyTrack>> _fetchRecentlyPlayed() async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    if (token == null) throw 'No se encontró el token de sesión de Spotify.';
+    final url = Uri.parse('https://api.spotify.com/v1/me/player/recently-played?limit=20');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200) throw 'Error al obtener reproducidas recientemente: \\n${response.body}';
+    final data = json.decode(response.body);
+    final items = data['items'] as List<dynamic>;
+    return items.map((item) => _spotifyTrackFromItem(item['track'])).toList();
+  }
+
+  Future<List<SpotifyTrack>> _fetchNewReleases() async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    if (token == null) throw 'No se encontró el token de sesión de Spotify.';
+    final url = Uri.parse('https://api.spotify.com/v1/browse/new-releases?limit=20');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200) throw 'Error al obtener nuevos lanzamientos: \\n${response.body}';
+    final data = json.decode(response.body);
+    final items = (data['albums']['items'] as List<dynamic>);
+    // Tomamos la primera canción de cada álbum
+    List<SpotifyTrack> tracks = [];
+    for (final album in items) {
+      if (album['id'] == null) continue;
+      final albumId = album['id'];
+      final albumUrl = Uri.parse('https://api.spotify.com/v1/albums/$albumId');
+      final albumResp = await http.get(albumUrl, headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      });
+      if (albumResp.statusCode == 200) {
+        final albumData = json.decode(albumResp.body);
+        final tracksList = albumData['tracks']['items'] as List<dynamic>;
+        if (tracksList.isNotEmpty) {
+          final firstTrack = tracksList[0];
+          tracks.add(_spotifyTrackFromItem({
+            ...firstTrack,
+            'album': album, // Usamos la portada del álbum
+          }));
+        }
+      }
+    }
+    return tracks;
+  }
+
+  Future<List<SpotifyTrack>> _fetchRecommendations() async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    if (token == null) throw 'No se encontró el token de sesión de Spotify.';
+    // Para recomendaciones, usamos los top artists/tracks como seeds
+    final topTracks = await _fetchTopTracks();
+    final seeds = topTracks.take(5).map((t) => t.uri.split(':').last).join(',');
+    final url = Uri.parse('https://api.spotify.com/v1/recommendations?limit=20&seed_tracks=$seeds');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200) throw 'Error al obtener recomendaciones: \\n${response.body}';
+    final data = json.decode(response.body);
+    final items = data['tracks'] as List<dynamic>;
+    return items.map(_spotifyTrackFromItem).toList();
+  }
+
+  SpotifyTrack _spotifyTrackFromItem(dynamic item) {
+    final durationMs = item['duration_ms'] as int? ?? 0;
+    final duration = _formatDuration(Duration(milliseconds: durationMs));
+    return SpotifyTrack(
+      title: item['name'] ?? '',
+      artist: (item['artists'] as List).isNotEmpty ? item['artists'][0]['name'] : '',
+      duration: duration,
+      albumArtUrl: item['album'] != null && (item['album']['images'] as List).isNotEmpty
+          ? item['album']['images'][0]['url']
+          : '',
+      uri: item['uri'] ?? '',
+    );
+  }
+
 
   Widget _buildTaskManager() {
     // Usar solo el widget TaskManagerScreen centralizado
@@ -301,122 +592,143 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
 
 
   Widget _buildPlayerContent() {
-    // Lista de canciones top
-    return FutureBuilder<List<SpotifyTrack>>(
-      future: getSpotifyTracks(context),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: \\${snapshot.error}', style: const TextStyle(color: Colors.white)));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('No hay canciones para mostrar', style: TextStyle(color: Colors.white)));
-        }
-        final tracks = snapshot.data!;
-        return SizedBox.expand(
-          child: Stack(
-            children: [
-              ListView.separated(
-                padding: const EdgeInsets.only(bottom: 120),
-                itemCount: tracks.length,
-                separatorBuilder: (_, __) => const Divider(color: Colors.white24, height: 1),
-                itemBuilder: (context, index) {
-                  final track = tracks[index];
-                  return ListTile(
-                    leading: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(track.albumArtUrl, width: 48, height: 48, fit: BoxFit.cover),
-                    ),
-                    title: Text(track.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    subtitle: Text(track.artist, style: const TextStyle(color: Colors.white70)),
-                    trailing: Text(track.duration, style: const TextStyle(color: Color(0xFFe0c36a))),
-                    onTap: () async {
-                      final player = Provider.of<PlayerProvider>(context, listen: false);
-                      // Reproducir la canción directamente
-                      await player.playSongFromList(
-  tracks.map((track) => Song(
-    id: track.uri.split(':').last,
-    title: track.title,
-    artist: track.artist,
-    album: '',
-    albumArtUrl: track.albumArtUrl,
-    durationMs: _parseDuration(track.duration),
-  )).toList(),
-  index,
-);
-                    },
-                  );
-                },
-              ),
-              // Mini Player Expandible
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: MiniPlayer(),
-              ),
-            ],
-          ),
-        );
-      },
+    return _SpotifyGlobalSearchPlayerContent(
+      buildSectionTitle: _buildSectionTitle,
+      buildHorizontalTrackList: (futureTracks) => _buildHorizontalTrackList(futureTracks),
+      buildTrackCard: _buildTrackCard,
+      getFavoriteTracksFuture: _getFavoriteTracksFuture,
+      getRecentlyPlayedFuture: _getRecentlyPlayedFuture,
+      getNewReleasesFuture: _getNewReleasesFuture,
+      getRecommendationsFuture: _getRecommendationsFuture,
     );
   }
 
-  int _parseDuration(String durationString) {
-    // Convierte "mm:ss" a milisegundos
-    final parts = durationString.split(':');
-    if (parts.length != 2) return 0;
-    final minutes = int.tryParse(parts[0]) ?? 0;
-    final seconds = int.tryParse(parts[1]) ?? 0;
-    return (minutes * 60 + seconds) * 1000;
-  }
+}
 
-  Future<List<SpotifyTrack>> getSpotifyTracks(BuildContext context) async {
-    // Importa AuthService y http arriba si no están importados
-    // import 'package:http/http.dart' as http;
-    // import '../services/auth_service.dart';
-    final auth = AuthService();
-    final token = await auth.getAccessToken();
-    if (token == null) throw 'No se encontró el token de sesión de Spotify.';
+class _SpotifyGlobalSearchPlayerContent extends StatefulWidget {
+  final SliverToBoxAdapter Function(String) buildSectionTitle;
+  final SliverToBoxAdapter Function(Future<List<SpotifyTrack>>) buildHorizontalTrackList;
+  final Widget Function(SpotifyTrack) buildTrackCard;
+  final Future<List<SpotifyTrack>> Function() getFavoriteTracksFuture;
+  final Future<List<SpotifyTrack>> Function() getRecentlyPlayedFuture;
+  final Future<List<SpotifyTrack>> Function() getNewReleasesFuture;
+  final Future<List<SpotifyTrack>> Function() getRecommendationsFuture;
 
-    final url = Uri.parse('https://api.spotify.com/v1/me/top/tracks?limit=20');
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-    );
-    if (response.statusCode != 200) {
-      throw 'Error al obtener canciones: ${response.statusCode}\n${response.body}';
+  const _SpotifyGlobalSearchPlayerContent({
+    required this.buildSectionTitle,
+    required this.buildHorizontalTrackList,
+    required this.buildTrackCard,
+    required this.getFavoriteTracksFuture,
+    required this.getRecentlyPlayedFuture,
+    required this.getNewReleasesFuture,
+    required this.getRecommendationsFuture,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  State<_SpotifyGlobalSearchPlayerContent> createState() => _SpotifyGlobalSearchPlayerContentState();
+}
+
+class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchPlayerContent> {
+  final TextEditingController _searchController = TextEditingController();
+  List<Song> _searchResults = [];
+  bool _isSearching = false;
+  String _lastQuery = '';
+
+  void _onSearchChanged(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+        _lastQuery = '';
+      });
+      return;
     }
-    final data = json.decode(response.body);
-    final items = data['items'] as List<dynamic>;
-    return items.map((item) {
-      final durationMs = item['duration_ms'] as int? ?? 0;
-      final duration = _formatDuration(Duration(milliseconds: durationMs));
-      return SpotifyTrack(
-        title: item['name'] ?? '',
-        artist: (item['artists'] as List).isNotEmpty ? item['artists'][0]['name'] : '',
-        duration: duration,
-        albumArtUrl: item['album'] != null && (item['album']['images'] as List).isNotEmpty
-            ? item['album']['images'][0]['url']
-            : '',
-        uri: item['uri'] ?? '',
-      );
-    }).toList();
+    setState(() { _isSearching = true; });
+    try {
+      final results = await SpotifySearchService.searchTracks(query);
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+        _lastQuery = query;
+      });
+    } catch (_) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+        _lastQuery = query;
+      });
+    }
   }
 
-  String _formatDuration(Duration d) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(d.inMinutes.remainder(60));
-    final seconds = twoDigits(d.inSeconds.remainder(60));
-    return '$minutes:$seconds';
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: SpotifySearchField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              hintText: 'Buscar en Spotify...',
+              showClear: _searchController.text.isNotEmpty,
+              onClear: () {
+                _searchController.clear();
+                _onSearchChanged('');
+              },
+            ),
+          ),
+        ),
+        if (_searchController.text.isNotEmpty)
+          _isSearching
+              ? const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                )
+              : _searchResults.isEmpty && _lastQuery.isNotEmpty
+                  ? const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: Text('No se encontraron canciones.', style: TextStyle(color: Colors.white70))),
+                      ),
+                    )
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, idx) {
+                          final song = _searchResults[idx];
+                          return ListTile(
+                            leading: song.albumArtUrl.isNotEmpty
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Image.network(song.albumArtUrl, width: 40, height: 40, fit: BoxFit.cover),
+                                  )
+                                : const Icon(Icons.music_note, color: Colors.white70),
+                            title: Text(song.title, style: const TextStyle(color: Colors.white)),
+                            subtitle: Text(song.artist, style: const TextStyle(color: Colors.white70)),
+                            onTap: () async {
+                              final player = Provider.of<PlayerProvider>(context, listen: false);
+                              await player.playSongFromList([song], 0);
+                            },
+                          );
+                        },
+                        childCount: _searchResults.length,
+                      ),
+                    )
+        else ...[
+          widget.buildSectionTitle('Tus favoritas'),
+          widget.buildHorizontalTrackList(widget.getFavoriteTracksFuture()),
+          widget.buildSectionTitle('Reproducidas recientemente'),
+          widget.buildHorizontalTrackList(widget.getRecentlyPlayedFuture()),
+          widget.buildSectionTitle('Nuevos lanzamientos'),
+          widget.buildHorizontalTrackList(widget.getNewReleasesFuture()),
+          widget.buildSectionTitle('Recomendaciones para ti'),
+          widget.buildHorizontalTrackList(widget.getRecommendationsFuture()),
+          SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ],
+    );
   }
-
-
-
-
-
-
 }

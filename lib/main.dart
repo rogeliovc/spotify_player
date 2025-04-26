@@ -22,18 +22,19 @@ class MyApp extends StatelessWidget {
     return FutureBuilder<String?>(
       future: AuthService().getAccessToken(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        // Mientras carga el token
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const MaterialApp(
             home: Scaffold(
               body: Center(child: CircularProgressIndicator()),
             ),
           );
         }
-        final token = snapshot.data ?? '';
+        final token = snapshot.data;
         return MultiProvider(
           providers: [
             ChangeNotifierProvider(create: (_) => TaskProvider()),
-            ChangeNotifierProvider(create: (_) => PlayerProvider(accessToken: token)),
+            ChangeNotifierProvider(create: (_) => PlayerProvider(accessToken: token ?? '')),
           ],
           child: MaterialApp(
             title: 'Spotify Player',
@@ -41,139 +42,13 @@ class MyApp extends StatelessWidget {
               colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
               useMaterial3: true,
             ),
-            home: const SplashDecider(),
+            home: token == null ? const HomeScreenLogin() : MainPlayerScreen(),
           ),
         );
       },
     );
   }
 }
-
-class SplashDecider extends StatefulWidget {
-  const SplashDecider({Key? key}) : super(key: key);
-
-  @override
-  State<SplashDecider> createState() => _SplashDeciderState();
-}
-
-class _SplashDeciderState extends State<SplashDecider> {
-  final AuthService _authService = AuthService();
-
-  String? _token;
-  String? _refreshToken;
-  int? _expiry;
-  bool _isValid = false;
-  String _status = 'Verificando sesión...';
-
-  @override
-  void initState() {
-    super.initState();
-    _checkAuth();
-  }
-
-  Future<void> _checkAuth() async {
-    final token = await _authService.getAccessToken();
-    final expiry = await _authService.getTokenExpiry();
-    final refreshToken = await _authService.getRefreshToken();
-    final now = DateTime.now().millisecondsSinceEpoch;
-    bool isValid = false;
-    String status = '';
-    if (token != null && expiry != null && expiry > now) {
-      isValid = true;
-      status = 'Sesión activa: token válido.';
-      setState(() {
-        _token = token;
-        _refreshToken = refreshToken;
-        _expiry = expiry;
-        _isValid = isValid;
-        _status = status;
-      });
-      await Future.delayed(const Duration(seconds: 3));
-      if (mounted) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MainPlayerScreen()));
-      }
-    } else if (token != null) {
-      status = 'Token expirado. Intentando refrescar...';
-      setState(() {
-        _token = token;
-        _refreshToken = refreshToken;
-        _expiry = expiry;
-        _isValid = false;
-        _status = status;
-      });
-      final refreshed = await _authService.refreshAccessToken();
-      if (refreshed) {
-        status = 'Token refrescado exitosamente.';
-        final newToken = await _authService.getAccessToken();
-        final newRefreshToken = await _authService.getRefreshToken();
-        final newExpiry = await _authService.getTokenExpiry();
-        setState(() {
-          _token = newToken;
-          _refreshToken = newRefreshToken;
-          _expiry = newExpiry;
-          _isValid = true;
-          _status = status;
-        });
-        await Future.delayed(const Duration(seconds: 3));
-        if (mounted) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MainPlayerScreen()));
-        }
-      } else {
-        status = 'No se pudo refrescar el token. Debes iniciar sesión.';
-        setState(() {
-          _isValid = false;
-          _status = status;
-        });
-        await Future.delayed(const Duration(seconds: 3));
-        if (mounted) {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreenLogin()));
-        }
-      }
-    } else {
-      status = 'No hay sesión activa. Debes iniciar sesión.';
-      setState(() {
-        _isValid = false;
-        _status = status;
-      });
-      await Future.delayed(const Duration(seconds: 3));
-      if (mounted) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreenLogin()));
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 24),
-              Text(_status, style: const TextStyle(fontSize: 16)),
-              const SizedBox(height: 16),
-              if (_token != null) ...[
-                SelectableText('Access Token: ${_token!.substring(0, 16)}...', style: const TextStyle(fontSize: 13, color: Colors.blueGrey)),
-              ],
-              if (_refreshToken != null) ...[
-                SelectableText('Refresh Token: ${_refreshToken!.substring(0, 16)}...', style: const TextStyle(fontSize: 13, color: Colors.teal)),
-              ],
-              if (_expiry != null) ...[
-                Text('Expira en: ${DateTime.fromMillisecondsSinceEpoch(_expiry!).toLocal()}'),
-                Text('¿Token válido?: ${_isValid ? 'Sí' : 'No'}'),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
 
 class HomeScreenLogin extends StatefulWidget {
   const HomeScreenLogin({super.key});
@@ -191,15 +66,27 @@ class _HomeScreenLoginState extends State<HomeScreenLogin> {
 
   Future<void> _login() async {
     setState(() {
-      _loading = false; // Nunca bloqueamos la UI manual
-      _showManualInput = true; // Siempre mostramos el campo manual tras login
+      _loading = true;
       _error = null;
+      _showManualInput = false;
     });
     try {
       await _authService.authenticate();
+      setState(() {
+        _loading = false;
+        _showManualInput = false;
+      });
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MainPlayerScreen()),
+        );
+      }
     } catch (e) {
       setState(() {
+        _loading = false;
         _error = 'Error: ' + e.toString();
+        _showManualInput = true;
       });
     }
   }
@@ -241,10 +128,41 @@ class _HomeScreenLoginState extends State<HomeScreenLogin> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              if (_error != null) ...[
+                Text(
+                  _error!,
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 18),
+              ],
               ElevatedButton(
-                onPressed: _login,
-                child: Text('Iniciar sesión con Spotify'),
+                onPressed: _loading ? null : _login,
+                child: _loading
+                    ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          ),
+                          SizedBox(width: 12),
+                          Text('Esperando Spotify...'),
+                        ],
+                      )
+                    : Text('Iniciar sesión con Spotify'),
               ),
+              const SizedBox(height: 16),
+              if (!_showManualInput)
+                TextButton(
+                  onPressed: _loading ? null : () {
+                    setState(() {
+                      _showManualInput = true;
+                    });
+                  },
+                  child: const Text('¿Tienes un código? Ingresar manualmente'),
+                ),
               if (_showManualInput) ...[
                 SizedBox(height: 24),
                 Text('¿Tienes un código de autorización? Pégalo aquí:'),
@@ -259,17 +177,6 @@ class _HomeScreenLoginState extends State<HomeScreenLogin> {
                 ElevatedButton(
                   onPressed: _loading ? null : _exchangeManualCode,
                   child: Text('Intercambiar código por token'),
-                ),
-              ],
-              if (_loading) ...[
-                SizedBox(height: 24),
-                CircularProgressIndicator(),
-              ],
-              if (_error != null) ...[
-                SizedBox(height: 24),
-                Text(
-                  _error!,
-                  style: TextStyle(color: Colors.red),
                 ),
               ],
             ],

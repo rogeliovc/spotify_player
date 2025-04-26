@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:palette_generator/palette_generator.dart';
 import '../providers/player_provider.dart';
 import '../models/song_model.dart';
+import '../utils/spotify_search.dart';
+import '../widgets/spotify_search_field.dart';
 
 class MiniPlayer extends StatefulWidget {
   @override
@@ -177,6 +179,30 @@ class _MiniPlayerWidget extends StatelessWidget {
   }
 }
 
+// Helper class to persist state in the playlist modal
+class _PlaylistSearchState extends InheritedWidget {
+  final TextEditingController controller = TextEditingController();
+  List<Song> searchResults = [];
+  bool isSearching = false;
+  String lastQuery = '';
+
+  _PlaylistSearchState({required Widget child}) : super(child: child);
+
+  void set({List<Song>? searchResults, bool? isSearching, String? lastQuery}) {
+    if (searchResults != null) this.searchResults = searchResults;
+    if (isSearching != null) this.isSearching = isSearching;
+    if (lastQuery != null) this.lastQuery = lastQuery;
+  }
+
+  static _PlaylistSearchState of(BuildContext context) {
+    final _PlaylistSearchState? result = context.dependOnInheritedWidgetOfExactType<_PlaylistSearchState>();
+    assert(result != null, 'No _PlaylistSearchState found in context');
+    return result!;
+  }
+
+  @override
+  bool updateShouldNotify(_PlaylistSearchState oldWidget) => true;
+}
 
 class _ExpandedPlayer extends StatelessWidget {
   final ScrollController scrollController;
@@ -189,47 +215,130 @@ class _ExpandedPlayer extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      isScrollControlled: true,
       builder: (ctx) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.0),
-                child: Text('Lista de reproducción', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-              ),
-              if (player.playlist.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text('No hay canciones en la lista.', style: TextStyle(color: Colors.white70)),
-                )
-              else
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: player.playlist.length,
-                    itemBuilder: (ctx, idx) {
-                      final song = player.playlist[idx];
-                      return ListTile(
-                        leading: song.albumArtUrl.isNotEmpty
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(6),
-                                child: Image.network(song.albumArtUrl, width: 40, height: 40, fit: BoxFit.cover),
-                              )
-                            : const Icon(Icons.music_note, color: Colors.white70),
-                        title: Text(song.title, style: TextStyle(color: idx == player.currentIndex ? Colors.amber : Colors.white)),
-                        subtitle: Text(song.artist, style: const TextStyle(color: Colors.white70)),
-                        selected: idx == player.currentIndex,
-                        onTap: () async {
-                          Navigator.of(context).pop();
-                          await player.playSongFromList(player.playlist, idx);
-                        },
-                      );
-                    },
-                  ),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              // Persist state across rebuilds using closures
+              final state = _PlaylistSearchState.of(context);
+              final searchController = state.controller;
+              final searchResults = state.searchResults;
+              final isSearching = state.isSearching;
+              final lastQuery = state.lastQuery;
+
+              Future<void> doSearch(String query) async {
+                if (query.isEmpty) {
+                  state.set(isSearching: false, searchResults: [], lastQuery: '');
+                  setState(() {});
+                  return;
+                }
+                state.set(isSearching: true);
+                setState(() {});
+                try {
+                  final results = await SpotifySearchService.searchTracks(query);
+                  state.set(searchResults: results, isSearching: false, lastQuery: query);
+                  setState(() {});
+                } catch (_) {
+                  state.set(searchResults: [], isSearching: false, lastQuery: query);
+                  setState(() {});
+                }
+              }
+
+              return Padding(
+                padding: MediaQuery.of(context).viewInsets,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 0),
+                      child: Row(
+                        children: [
+                          const Text('Lista de reproducción',
+                              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                          const Spacer(),
+                          SpotifySearchField(
+                            controller: searchController,
+                            onChanged: (q) => doSearch(q),
+                            hintText: 'Buscar Spotify...',
+                            showClear: searchController.text.isNotEmpty,
+                            onClear: () {
+                              searchController.clear();
+                              doSearch('');
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (searchController.text.isNotEmpty)
+                      isSearching
+                          ? const Padding(
+                              padding: EdgeInsets.all(32),
+                              child: CircularProgressIndicator(),
+                            )
+                          : searchResults.isEmpty && lastQuery.isNotEmpty
+                              ? const Padding(
+                                  padding: EdgeInsets.all(24),
+                                  child: Text('No se encontraron canciones.', style: TextStyle(color: Colors.white70)),
+                                )
+                              : Flexible(
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    itemCount: searchResults.length,
+                                    itemBuilder: (ctx, idx) {
+                                      final song = searchResults[idx];
+                                      return ListTile(
+                                        leading: song.albumArtUrl.isNotEmpty
+                                            ? ClipRRect(
+                                                borderRadius: BorderRadius.circular(6),
+                                                child: Image.network(song.albumArtUrl, width: 20, height: 20, fit: BoxFit.cover),
+                                              )
+                                            : const Icon(Icons.music_note, color: Colors.white70),
+                                        title: Text(song.title, style: const TextStyle(color: Colors.white)),
+                                        subtitle: Text(song.artist, style: const TextStyle(color: Colors.white70)),
+                                        onTap: () async {
+                                          Navigator.of(context).pop();
+                                          await player.playSongFromList([song], 0);
+                                        },
+                                      );
+                                    },
+                                  ),
+                                )
+                    else if (player.playlist.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text('No hay canciones en la lista.', style: TextStyle(color: Colors.white70)),
+                      )
+                    else
+                      Flexible(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: player.playlist.length,
+                          itemBuilder: (ctx, idx) {
+                            final song = player.playlist[idx];
+                            return ListTile(
+                              leading: song.albumArtUrl.isNotEmpty
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: Image.network(song.albumArtUrl, width: 20, height: 20, fit: BoxFit.cover),
+                                    )
+                                  : const Icon(Icons.music_note, color: Colors.white70),
+                              title: Text(song.title, style: TextStyle(color: idx == player.currentIndex ? Colors.amber : Colors.white)),
+                              subtitle: Text(song.artist, style: const TextStyle(color: Colors.white70)),
+                              selected: idx == player.currentIndex,
+                              onTap: () async {
+                                Navigator.of(context).pop();
+                                await player.playSongFromList(player.playlist, idx);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 24),
+                  ],
                 ),
-              const SizedBox(height: 24),
-            ],
+              );
+            },
           ),
         );
       },

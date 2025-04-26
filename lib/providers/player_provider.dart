@@ -3,12 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../utils/spotify_device_utils.dart';
 import '../models/song_model.dart';
-
+import '../services/auth_service.dart';
+import '../main.dart';
 import 'dart:async';
 
 class PlayerProvider extends ChangeNotifier {
   bool isProcessing = false;
   final String accessToken;
+
+  BuildContext? appContext;
+
+  void setContext(BuildContext context) {
+    appContext = context;
+  }
+
+  void _handleInvalidToken() async {
+    // Borra token y navega al login
+    await AuthService().signOut();
+    if (appContext != null) {
+      Navigator.of(appContext!).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomeScreenLogin()),
+        (route) => false,
+      );
+    }
+  }
   Song? currentSong;
   Timer? _positionTimer;
   bool _freezeTimerWhileSeeking = false;
@@ -22,6 +40,11 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> _syncWithSpotify() async {
+    if (accessToken.isEmpty) {
+      print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
+      _handleInvalidToken();
+      return;
+    }
     if (currentSong == null) return;
     try {
       final urlGet = Uri.parse('https://api.spotify.com/v1/me/player/currently-playing');
@@ -75,6 +98,11 @@ class PlayerProvider extends ChangeNotifier {
   PlayerProvider({required this.accessToken});
 
   Future<void> playSongFromList(List<Song> songs, int index, {void Function(String)? onError}) async {
+    if (accessToken.isEmpty) {
+      print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
+      _handleInvalidToken();
+      return;
+    }
   print('[playSongFromList] Llamado con index=$index, songs.length=${songs.length}');
     if (songs.isEmpty || index < 0 || index >= songs.length) {
       if (onError != null) onError('Índice o lista inválida.');
@@ -131,6 +159,12 @@ class PlayerProvider extends ChangeNotifier {
       } catch (_) {}
       notifyListeners();
       _startPositionTimer();
+    } else if (response.statusCode == 400 || response.statusCode == 401) {
+      if (response.body.contains('Only valid bearer authentication supported')) {
+        print('[PlayerProvider] Token inválido detectado por Spotify. Redirigiendo a login.');
+        _handleInvalidToken();
+        return;
+      }
     } else if (response.statusCode == 404 || response.statusCode == 403) {
       if (onError != null) {
         onError('No hay ningún dispositivo de reproducción activo.');
@@ -151,6 +185,11 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> pause() async {
+    if (accessToken.isEmpty) {
+      print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
+      _handleInvalidToken();
+      return;
+    }
     // Obtener la posición real desde Spotify ANTES de pausar
     try {
       final urlGet = Uri.parse('https://api.spotify.com/v1/me/player/currently-playing');
@@ -244,6 +283,11 @@ class PlayerProvider extends ChangeNotifier {
 
   /// Cambia el volumen de reproducción (0.0 a 1.0).
   Future<void> setVolume(double volume) async {
+    if (accessToken.isEmpty) {
+      print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
+      _handleInvalidToken();
+      return;
+    }
     _volume = volume;
     final percent = (volume * 100).toInt();
     final url = Uri.parse('https://api.spotify.com/v1/me/player/volume?volume_percent=$percent');
@@ -282,6 +326,11 @@ class PlayerProvider extends ChangeNotifier {
   bool _seekInProgress = false;
   int? _pendingSeekMs;
   Future<void> seek(int positionMs, {void Function(String)? onError}) async {
+    if (accessToken.isEmpty) {
+      print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
+      _handleInvalidToken();
+      return;
+    }
     if (_seekInProgress) {
       _pendingSeekMs = positionMs;
       return;
@@ -348,6 +397,11 @@ class PlayerProvider extends ChangeNotifier {
 
   /// Reanuda la reproducción desde la posición actual de la canción
   Future<void> resume({void Function(String)? onError}) async {
+    if (accessToken.isEmpty) {
+      print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
+      _handleInvalidToken();
+      return;
+    }
   if (isProcessing) {
     print('[resume] Ignorado: acción en curso.');
     return;

@@ -16,7 +16,7 @@ class AuthService {
   }
   static const String clientId = '4caddaabcd134c6da47d4f7d1c7877ba';
   static const String redirectUri = 'https://spotify-callback.vercel.app/api/callback';
-  static const String scopes = 'user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative streaming user-top-read';
+  static const String scopes = 'user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative streaming user-top-read user-read-recently-played user-read-email';
   static const String tokenUrl = 'https://accounts.spotify.com/api/token';
   static const String authUrl = 'https://accounts.spotify.com/authorize';
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
