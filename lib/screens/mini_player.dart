@@ -217,128 +217,116 @@ class _ExpandedPlayer extends StatelessWidget {
       ),
       isScrollControlled: true,
       builder: (ctx) {
-        return SafeArea(
-          child: StatefulBuilder(
-            builder: (context, setState) {
-              // Persist state across rebuilds using closures
-              final state = _PlaylistSearchState.of(context);
-              final searchController = state.controller;
-              final searchResults = state.searchResults;
-              final isSearching = state.isSearching;
-              final lastQuery = state.lastQuery;
+        return _PlaylistSearchState(
+          child: SafeArea(
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                // Persist state across rebuilds using closures
+                final state = _PlaylistSearchState.of(context);
+                final searchController = state.controller;
+                final searchResults = state.searchResults;
+                final isSearching = state.isSearching;
+                final lastQuery = state.lastQuery;
 
-              Future<void> doSearch(String query) async {
-                if (query.isEmpty) {
-                  state.set(isSearching: false, searchResults: [], lastQuery: '');
+                Future<void> doSearch(String query) async {
+                  if (query.isEmpty) {
+                    state.set(isSearching: false, searchResults: [], lastQuery: '');
+                    setState(() {});
+                    return;
+                  }
+                  state.set(isSearching: true);
                   setState(() {});
-                  return;
+                  try {
+                    final results = await SpotifySearchService.searchTracks(query);
+                    state.set(searchResults: results, isSearching: false, lastQuery: query);
+                    setState(() {});
+                  } catch (_) {
+                    state.set(searchResults: [], isSearching: false, lastQuery: query);
+                    setState(() {});
+                  }
                 }
-                state.set(isSearching: true);
-                setState(() {});
-                try {
-                  final results = await SpotifySearchService.searchTracks(query);
-                  state.set(searchResults: results, isSearching: false, lastQuery: query);
-                  setState(() {});
-                } catch (_) {
-                  state.set(searchResults: [], isSearching: false, lastQuery: query);
-                  setState(() {});
-                }
-              }
 
-              return Padding(
-                padding: MediaQuery.of(context).viewInsets,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 0),
-                      child: Row(
-                        children: [
-                          const Text('Lista de reproducción',
-                              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                          const Spacer(),
-                          SpotifySearchField(
-                            controller: searchController,
-                            onChanged: (q) => doSearch(q),
-                            hintText: 'Buscar Spotify...',
-                            showClear: searchController.text.isNotEmpty,
-                            onClear: () {
-                              searchController.clear();
-                              doSearch('');
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (searchController.text.isNotEmpty)
-                      isSearching
-                          ? const Padding(
-                              padding: EdgeInsets.all(32),
-                              child: CircularProgressIndicator(),
-                            )
-                          : searchResults.isEmpty && lastQuery.isNotEmpty
-                              ? const Padding(
-                                  padding: EdgeInsets.all(24),
-                                  child: Text('No se encontraron canciones.', style: TextStyle(color: Colors.white70)),
-                                )
-                              : Flexible(
-                                  child: ListView.builder(
-                                    shrinkWrap: true,
-                                    itemCount: searchResults.length,
-                                    itemBuilder: (ctx, idx) {
-                                      final song = searchResults[idx];
-                                      return ListTile(
-                                        leading: song.albumArtUrl.isNotEmpty
-                                            ? ClipRRect(
-                                                borderRadius: BorderRadius.circular(6),
-                                                child: Image.network(song.albumArtUrl, width: 20, height: 20, fit: BoxFit.cover),
-                                              )
-                                            : const Icon(Icons.music_note, color: Colors.white70),
-                                        title: Text(song.title, style: const TextStyle(color: Colors.white)),
-                                        subtitle: Text(song.artist, style: const TextStyle(color: Colors.white70)),
-                                        onTap: () async {
-                                          Navigator.of(context).pop();
-                                          await player.playSongFromList([song], 0);
-                                        },
-                                      );
-                                    },
-                                  ),
-                                )
-                    else if (player.playlist.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Text('No hay canciones en la lista.', style: TextStyle(color: Colors.white70)),
-                      )
-                    else
-                      Flexible(
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: player.playlist.length,
-                          itemBuilder: (ctx, idx) {
-                            final song = player.playlist[idx];
-                            return ListTile(
-                              leading: song.albumArtUrl.isNotEmpty
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(6),
-                                      child: Image.network(song.albumArtUrl, width: 20, height: 20, fit: BoxFit.cover),
-                                    )
-                                  : const Icon(Icons.music_note, color: Colors.white70),
-                              title: Text(song.title, style: TextStyle(color: idx == player.currentIndex ? Colors.amber : Colors.white)),
-                              subtitle: Text(song.artist, style: const TextStyle(color: Colors.white70)),
-                              selected: idx == player.currentIndex,
-                              onTap: () async {
-                                Navigator.of(context).pop();
-                                await player.playSongFromList(player.playlist, idx);
-                              },
-                            );
-                          },
+                return Padding(
+                  padding: MediaQuery.of(context).viewInsets,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 0),
+                        child: Row(
+                          children: [
+                            const Text('Lista de reproducción',
+                                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                          ],
                         ),
                       ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              );
-            },
+                      if (player.playlist.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text('No hay canciones en la lista.', style: TextStyle(color: Colors.white70)),
+                        )
+                      else
+                        Flexible(
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: player.playlist.length,
+                            itemBuilder: (ctx, idx) {
+                              final song = player.playlist[idx];
+                              if (song == null) return const SizedBox.shrink(); // Manejo de canción nula
+                              
+                              return ListTile(
+                                leading: song.albumArtUrl.isNotEmpty
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Image.network(
+                                          song.albumArtUrl,
+                                          width: 40,
+                                          height: 40,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Container(
+                                            width: 40,
+                                            height: 40,
+                                            color: Colors.grey[900],
+                                            child: const Icon(Icons.music_note, color: Colors.white70),
+                                          ),
+                                        ),
+                                      )
+                                    : const Icon(Icons.music_note, color: Colors.white70),
+                                title: Text(
+                                  song.title.isNotEmpty ? song.title : 'Título desconocido',
+                                  style: TextStyle(
+                                    color: idx == player.currentIndex ? const Color(0xFFe0c36a) : Colors.white,
+                                    fontWeight: idx == player.currentIndex ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  song.artist.isNotEmpty ? song.artist : 'Artista desconocido',
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
+                                trailing: idx == player.currentIndex
+                                    ? const Icon(Icons.play_circle_filled, color: Color(0xFFe0c36a))
+                                    : null,
+                                selected: idx == player.currentIndex,
+                                onTap: () async {
+                                  try {
+                                    Navigator.of(context).pop();
+                                    await player.playSongFromList(player.playlist, idx);
+                                  } catch (e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error al reproducir la canción: $e')),
+                                    );
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         );
       },

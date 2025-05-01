@@ -402,8 +402,6 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
   Future<List<SpotifyTrack>> _getRecentlyPlayedFuture() async => _fetchRecentlyPlayed();
   // Nuevos lanzamientos
   Future<List<SpotifyTrack>> _getNewReleasesFuture() async => _fetchNewReleases();
-  // Recomendaciones
-  Future<List<SpotifyTrack>> _getRecommendationsFuture() async => _fetchRecommendations();
 
   Future<List<SpotifyTrack>> _fetchTopTracks() async {
     final auth = AuthService();
@@ -481,27 +479,6 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
     return tracks;
   }
 
-  Future<List<SpotifyTrack>> _fetchRecommendations() async {
-    final auth = AuthService();
-    final token = await auth.getAccessToken();
-    if (token == null) throw 'No se encontró el token de sesión de Spotify.';
-    // Para recomendaciones, usamos los top artists/tracks como seeds
-    final topTracks = await _fetchTopTracks();
-    final seeds = topTracks.take(5).map((t) => t.uri.split(':').last).join(',');
-    final url = Uri.parse('https://api.spotify.com/v1/recommendations?limit=20&seed_tracks=$seeds');
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-    );
-    if (response.statusCode != 200) throw 'Error al obtener recomendaciones: \\n${response.body}';
-    final data = json.decode(response.body);
-    final items = data['tracks'] as List<dynamic>;
-    return items.map(_spotifyTrackFromItem).toList();
-  }
-
   SpotifyTrack _spotifyTrackFromItem(dynamic item) {
     final durationMs = item['duration_ms'] as int? ?? 0;
     final duration = _formatDuration(Duration(milliseconds: durationMs));
@@ -515,7 +492,6 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
       uri: item['uri'] ?? '',
     );
   }
-
 
   Widget _buildTaskManager() {
     // Usar solo el widget TaskManagerScreen centralizado
@@ -590,19 +566,226 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
     );
   }
 
+  // Playlists del usuario
+  Future<List<SpotifyTrack>> _getUserPlaylistsFuture() async => _fetchUserPlaylists();
 
-  Widget _buildPlayerContent() {
-    return _SpotifyGlobalSearchPlayerContent(
-      buildSectionTitle: _buildSectionTitle,
-      buildHorizontalTrackList: (futureTracks) => _buildHorizontalTrackList(futureTracks),
-      buildTrackCard: _buildTrackCard,
-      getFavoriteTracksFuture: _getFavoriteTracksFuture,
-      getRecentlyPlayedFuture: _getRecentlyPlayedFuture,
-      getNewReleasesFuture: _getNewReleasesFuture,
-      getRecommendationsFuture: _getRecommendationsFuture,
+  Future<List<SpotifyTrack>> _fetchUserPlaylists() async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    if (token == null) throw 'No se encontró el token de sesión de Spotify.';
+    final url = Uri.parse('https://api.spotify.com/v1/me/playlists?limit=20');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200) throw 'Error al obtener playlists: \n${response.body}';
+    final data = json.decode(response.body);
+    final items = data['items'] as List<dynamic>;
+    return items.map((item) {
+      final images = item['images'] as List<dynamic>? ?? [];
+      return SpotifyTrack(
+        title: item['name'] ?? '',
+        artist: item['owner']?['display_name'] ?? '',
+        duration: '',
+        albumArtUrl: images.isNotEmpty ? images[0]['url'] ?? '' : '',
+        uri: item['uri'] ?? '',
+      );
+    }).toList();
+  }
+
+  Widget _buildPlaylistCard(SpotifyTrack playlist) {
+    return GestureDetector(
+      onTap: () async {
+        final auth = AuthService();
+        final token = await auth.getAccessToken();
+        if (token == null) throw 'No se encontró el token de sesión de Spotify.';
+        
+        // Obtener las canciones de la playlist
+        final playlistId = playlist.uri.split(':').last;
+        final url = Uri.parse('https://api.spotify.com/v1/playlists/$playlistId/tracks');
+        final response = await http.get(
+          url,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        );
+        if (response.statusCode != 200) throw 'Error al obtener canciones de la playlist: \n${response.body}';
+        
+        final data = json.decode(response.body);
+        final items = data['items'] as List<dynamic>;
+        final songs = items.map((item) {
+          final track = item['track'] as Map<String, dynamic>? ?? {};
+          final artists = track['artists'] as List<dynamic>? ?? [];
+          final album = track['album'] as Map<String, dynamic>? ?? {};
+          final images = album['images'] as List<dynamic>? ?? [];
+          
+          return Song(
+            id: track['id'] ?? '',
+            title: track['name'] ?? '',
+            artist: artists.isNotEmpty ? artists[0]['name'] ?? '' : '',
+            album: album['name'] ?? '',
+            albumArtUrl: images.isNotEmpty ? images[0]['url'] ?? '' : '',
+            durationMs: track['duration_ms'] ?? 0,
+          );
+        }).toList();
+
+        final player = Provider.of<PlayerProvider>(context, listen: false);
+        await player.playSongFromList(songs, 0);
+      },
+      child: Container(
+        width: 140,
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.network(
+                playlist.albumArtUrl,
+                width: 140,
+                height: 140,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 140,
+                  height: 140,
+                  color: Colors.grey[900],
+                  child: Icon(Icons.playlist_play, color: Colors.white38, size: 48),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.55),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      playlist.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                    Text(
+                      playlist.artist,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFe0c36a).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.play_circle_filled, color: Color(0xFFe0c36a), size: 24),
+                          onPressed: null, // El onTap del GestureDetector maneja la reproducción
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
+  Widget _buildPlayerContent() {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: SpotifySearchField(
+              controller: TextEditingController(),
+              onChanged: (_) {},
+              hintText: 'Buscar en Spotify...',
+              showClear: false,
+              onClear: () {},
+            ),
+          ),
+        ),
+        _buildSectionTitle('Tus playlists'),
+        SliverToBoxAdapter(
+          child: FutureBuilder<List<SpotifyTrack>>(
+            future: _getUserPlaylistsFuture(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return SizedBox(
+                  height: 180,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snapshot.hasError) {
+                return SizedBox(
+                  height: 180,
+                  child: Center(
+                    child: Text('Error: \n${snapshot.error}', style: TextStyle(color: Colors.red[200])),
+                  ),
+                );
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return SizedBox(
+                  height: 180,
+                  child: Center(child: Text('Sin playlists', style: TextStyle(color: Colors.white70))),
+                );
+              }
+              final playlists = snapshot.data!;
+              return SizedBox(
+                height: 180,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: playlists.length,
+                  separatorBuilder: (_, __) => SizedBox(width: 16),
+                  itemBuilder: (context, index) {
+                    final playlist = playlists[index];
+                    return _buildPlaylistCard(playlist);
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        _buildSectionTitle('Tus favoritas'),
+        _buildHorizontalTrackList(_getFavoriteTracksFuture()),
+        _buildSectionTitle('Reproducidas recientemente'),
+        _buildHorizontalTrackList(_getRecentlyPlayedFuture()),
+        _buildSectionTitle('Nuevos lanzamientos'),
+        _buildHorizontalTrackList(_getNewReleasesFuture()),
+        SliverToBoxAdapter(child: SizedBox(height: 100)),
+      ],
+    );
+  }
 }
 
 class _SpotifyGlobalSearchPlayerContent extends StatefulWidget {
@@ -612,7 +795,8 @@ class _SpotifyGlobalSearchPlayerContent extends StatefulWidget {
   final Future<List<SpotifyTrack>> Function() getFavoriteTracksFuture;
   final Future<List<SpotifyTrack>> Function() getRecentlyPlayedFuture;
   final Future<List<SpotifyTrack>> Function() getNewReleasesFuture;
-  final Future<List<SpotifyTrack>> Function() getRecommendationsFuture;
+  final Future<List<SpotifyTrack>> Function() getUserPlaylistsFuture;
+  final Widget Function(SpotifyTrack) buildPlaylistCard;
 
   const _SpotifyGlobalSearchPlayerContent({
     required this.buildSectionTitle,
@@ -621,7 +805,8 @@ class _SpotifyGlobalSearchPlayerContent extends StatefulWidget {
     required this.getFavoriteTracksFuture,
     required this.getRecentlyPlayedFuture,
     required this.getNewReleasesFuture,
-    required this.getRecommendationsFuture,
+    required this.getUserPlaylistsFuture,
+    required this.buildPlaylistCard,
     Key? key,
   }) : super(key: key);
 
@@ -724,8 +909,48 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
           widget.buildHorizontalTrackList(widget.getRecentlyPlayedFuture()),
           widget.buildSectionTitle('Nuevos lanzamientos'),
           widget.buildHorizontalTrackList(widget.getNewReleasesFuture()),
-          widget.buildSectionTitle('Recomendaciones para ti'),
-          widget.buildHorizontalTrackList(widget.getRecommendationsFuture()),
+          widget.buildSectionTitle('Tus playlists'),
+          SliverToBoxAdapter(
+            child: FutureBuilder<List<SpotifyTrack>>(
+              future: widget.getUserPlaylistsFuture(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return SizedBox(
+                    height: 180,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return SizedBox(
+                    height: 180,
+                    child: Center(
+                      child: Text('Error: \n${snapshot.error}', style: TextStyle(color: Colors.red[200])),
+                    ),
+                  );
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return SizedBox(
+                    height: 180,
+                    child: Center(child: Text('Sin playlists', style: TextStyle(color: Colors.white70))),
+                  );
+                }
+                final playlists = snapshot.data!;
+                return SizedBox(
+                  height: 180,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: playlists.length,
+                    separatorBuilder: (_, __) => SizedBox(width: 16),
+                    itemBuilder: (context, index) {
+                      final playlist = playlists[index];
+                      return widget.buildPlaylistCard(playlist);
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
           SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ],
