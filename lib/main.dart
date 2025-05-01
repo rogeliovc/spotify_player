@@ -42,7 +42,7 @@ class MyApp extends StatelessWidget {
               colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
               useMaterial3: true,
             ),
-            home: token == null ? const HomeScreenLogin() : MainPlayerScreen(),
+            home: token == null ? const HomeScreenLogin() : const MainPlayerScreen(),
           ),
         );
       },
@@ -58,128 +58,202 @@ class HomeScreenLogin extends StatefulWidget {
 }
 
 class _HomeScreenLoginState extends State<HomeScreenLogin> {
-  final AuthService _authService = AuthService();
-  bool _loading = false;
-  String? _error;
-  final TextEditingController _manualCodeController = TextEditingController();
-  bool _showManualInput = false;
+  final TextEditingController _codeController = TextEditingController();
+  bool _isLoading = false;
+  String? _errorMessage;
 
   Future<void> _login() async {
     setState(() {
-      _loading = true;
-      _error = null;
-      _showManualInput = false;
+      _isLoading = true;
+      _errorMessage = null;
     });
+
     try {
-      await _authService.authenticate();
-      setState(() {
-        _loading = false;
-        _showManualInput = false;
-      });
+      await AuthService().authenticate();
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => MainPlayerScreen()),
         );
       }
     } catch (e) {
-      setState(() {
-        _loading = false;
-        _error = 'Error: ' + e.toString();
-        _showManualInput = true;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
   Future<void> _exchangeManualCode() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      await _authService.exchangeManualCode(_manualCodeController.text.trim());
+    final code = _codeController.text.trim();
+    if (code.isEmpty) {
       setState(() {
-        _loading = false;
-        _showManualInput = false;
+        _errorMessage = 'Por favor, ingresa el código de autorización';
       });
-      // Navegar a la pantalla principal tras login
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await AuthService().exchangeManualCode(code);
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
+        Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => MainPlayerScreen()),
         );
       }
     } catch (e) {
-      setState(() {
-        _loading = false;
-        _error = 'Error: ' + e.toString();
-        _showManualInput = true;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Spotify Player')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (_error != null) ...[
-                Text(
-                  _error!,
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
+      backgroundColor: const Color(0xFF0E1928),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.music_note,
+                  size: 80,
+                  color: Colors.white,
                 ),
-                SizedBox(height: 18),
-              ],
-              ElevatedButton(
-                onPressed: _loading ? null : _login,
-                child: _loading
-                    ? Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          ),
-                          SizedBox(width: 12),
-                          Text('Esperando Spotify...'),
-                        ],
-                      )
-                    : Text('Iniciar sesión con Spotify'),
-              ),
-              const SizedBox(height: 16),
-              if (!_showManualInput)
-                TextButton(
-                  onPressed: _loading ? null : () {
-                    setState(() {
-                      _showManualInput = true;
-                    });
-                  },
-                  child: const Text('¿Tienes un código? Ingresar manualmente'),
-                ),
-              if (_showManualInput) ...[
-                SizedBox(height: 24),
-                Text('¿Tienes un código de autorización? Pégalo aquí:'),
-                TextField(
-                  controller: _manualCodeController,
-                  enabled: !_loading,
-                  decoration: InputDecoration(
-                    labelText: 'Código de autorización',
+                const SizedBox(height: 24),
+                const Text(
+                  'Sincronía',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 8),
+                const Text(
+                  'Tu música, sincronizada con tus tareas',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 48),
+                if (_isLoading)
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  )
+                else
+                  ElevatedButton.icon(
+                    onPressed: _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1DB954),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    icon: const Icon(Icons.music_note, color: Colors.white),
+                    label: const Text(
+                      'Iniciar sesión con Spotify',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 24),
+                if (_errorMessage != null)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red),
+                    ),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                const SizedBox(height: 24),
+                const Divider(color: Colors.white24),
+                const SizedBox(height: 24),
+                const Text(
+                  'O ingresa el código manualmente',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _codeController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Código de autorización',
+                    hintStyle: const TextStyle(color: Colors.white38),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.1),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: _loading ? null : _exchangeManualCode,
-                  child: Text('Intercambiar código por token'),
+                  onPressed: _exchangeManualCode,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Ingresar código',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 48),
+                const Text(
+                  'Al iniciar sesión, aceptas los términos y condiciones de uso de Spotify',
+                  style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
-            ],
+            ),
           ),
         ),
       ),

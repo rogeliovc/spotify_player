@@ -14,6 +14,8 @@ import '../utils/spotify_search.dart';
 import '../widgets/spotify_search_field.dart';
 
 class MainPlayerScreen extends StatefulWidget {
+  const MainPlayerScreen({super.key});
+
   @override
   State<MainPlayerScreen> createState() => _MainPlayerScreenState();
 }

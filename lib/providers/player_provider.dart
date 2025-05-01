@@ -9,7 +9,10 @@ import 'dart:async';
 
 class PlayerProvider extends ChangeNotifier {
   bool isProcessing = false;
-  final String accessToken;
+  String _accessToken;
+  final AuthService _authService = AuthService();
+
+  PlayerProvider({required String accessToken}) : _accessToken = accessToken;
 
   BuildContext? appContext;
 
@@ -19,14 +22,40 @@ class PlayerProvider extends ChangeNotifier {
 
   void _handleInvalidToken() async {
     // Borra token y navega al login
-    await AuthService().signOut();
+    await _authService.signOut();
     if (appContext != null) {
+      ScaffoldMessenger.of(appContext!).showSnackBar(
+        const SnackBar(
+          content: Text('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
       Navigator.of(appContext!).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomeScreenLogin()),
         (route) => false,
       );
     }
   }
+
+  Future<bool> _verifyToken() async {
+    if (_accessToken.isEmpty) {
+      _handleInvalidToken();
+      return false;
+    }
+
+    final isValid = await _authService.isTokenValid();
+    if (!isValid) {
+      final refreshed = await _authService.refreshAccessToken();
+      if (!refreshed) {
+        _handleInvalidToken();
+        return false;
+      }
+      // Actualiza el token en el provider
+      _accessToken = (await _authService.getAccessToken()) ?? '';
+    }
+    return true;
+  }
+
   Song? currentSong;
   Timer? _positionTimer;
   bool _freezeTimerWhileSeeking = false;
@@ -40,7 +69,7 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> _syncWithSpotify() async {
-    if (accessToken.isEmpty) {
+    if (_accessToken.isEmpty) {
       print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
       _handleInvalidToken();
       return;
@@ -51,7 +80,7 @@ class PlayerProvider extends ChangeNotifier {
       final responseGet = await http.get(
         urlGet,
         headers: {
-          'Authorization': 'Bearer $accessToken',
+          'Authorization': 'Bearer $_accessToken',
         },
       );
       if (responseGet.statusCode == 200) {
@@ -95,15 +124,10 @@ class PlayerProvider extends ChangeNotifier {
   double _volume = 0.5;
   double get volume => _volume;
 
-  PlayerProvider({required this.accessToken});
-
   Future<void> playSongFromList(List<Song> songs, int index, {void Function(String)? onError}) async {
-    if (accessToken.isEmpty) {
-      print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
-      _handleInvalidToken();
-      return;
-    }
-  print('[playSongFromList] Llamado con index=$index, songs.length=${songs.length}');
+    if (!await _verifyToken()) return;
+
+    print('[playSongFromList] Llamado con index=$index, songs.length=${songs.length}');
     if (songs.isEmpty || index < 0 || index >= songs.length) {
       if (onError != null) onError('Índice o lista inválida.');
       return;
@@ -114,7 +138,7 @@ class PlayerProvider extends ChangeNotifier {
     final song = songs[index];
     await pause();
     _stopPositionTimer();
-    final deviceId = await getActiveDeviceId(accessToken);
+    final deviceId = await getActiveDeviceId(_accessToken);
     if (deviceId == null) {
       if (onError != null) {
         onError('No hay ningún dispositivo de reproducción activo. Abre la app de música en tu dispositivo y reproduce una canción manualmente antes de usar Sincronía.');
@@ -122,13 +146,13 @@ class PlayerProvider extends ChangeNotifier {
       return;
     }
     // Transfiere el playback al dispositivo antes de reproducir
-    await transferPlaybackToDevice(accessToken, deviceId);
+    await transferPlaybackToDevice(_accessToken, deviceId);
     final url = Uri.parse('https://api.spotify.com/v1/me/player/play?device_id=$deviceId');
     final uris = songs.map((s) => 'spotify:track:${s.id}').toList();
     final response = await http.put(
       url,
       headers: {
-        'Authorization': 'Bearer $accessToken',
+        'Authorization': 'Bearer $_accessToken',
         'Content-Type': 'application/json',
       },
       body: jsonEncode({
@@ -146,7 +170,7 @@ class PlayerProvider extends ChangeNotifier {
         final responseGet = await http.get(
           urlGet,
           headers: {
-            'Authorization': 'Bearer $accessToken',
+            'Authorization': 'Bearer $_accessToken',
           },
         );
         if (responseGet.statusCode == 200) {
@@ -185,18 +209,14 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   Future<void> pause() async {
-    if (accessToken.isEmpty) {
-      print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
-      _handleInvalidToken();
-      return;
-    }
+    if (!await _verifyToken()) return;
     // Obtener la posición real desde Spotify ANTES de pausar
     try {
       final urlGet = Uri.parse('https://api.spotify.com/v1/me/player/currently-playing');
       final responseGet = await http.get(
         urlGet,
         headers: {
-          'Authorization': 'Bearer $accessToken',
+          'Authorization': 'Bearer $_accessToken',
         },
       );
       if (responseGet.statusCode == 200) {
@@ -221,7 +241,7 @@ class PlayerProvider extends ChangeNotifier {
     final response = await http.put(
       url,
       headers: {
-        'Authorization': 'Bearer $accessToken',
+        'Authorization': 'Bearer $_accessToken',
       },
     );
     // Siempre actualiza el estado y notifica
@@ -283,18 +303,14 @@ class PlayerProvider extends ChangeNotifier {
 
   /// Cambia el volumen de reproducción (0.0 a 1.0).
   Future<void> setVolume(double volume) async {
-    if (accessToken.isEmpty) {
-      print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
-      _handleInvalidToken();
-      return;
-    }
+    if (!await _verifyToken()) return;
     _volume = volume;
     final percent = (volume * 100).toInt();
     final url = Uri.parse('https://api.spotify.com/v1/me/player/volume?volume_percent=$percent');
     final response = await http.put(
       url,
       headers: {
-        'Authorization': 'Bearer $accessToken',
+        'Authorization': 'Bearer $_accessToken',
       },
     );
     if (response.statusCode == 200 || response.statusCode == 204) {
@@ -304,7 +320,7 @@ class PlayerProvider extends ChangeNotifier {
         final responseGet = await http.get(
           urlGet,
           headers: {
-            'Authorization': 'Bearer $accessToken',
+            'Authorization': 'Bearer $_accessToken',
           },
         );
         if (responseGet.statusCode == 200) {
@@ -326,11 +342,7 @@ class PlayerProvider extends ChangeNotifier {
   bool _seekInProgress = false;
   int? _pendingSeekMs;
   Future<void> seek(int positionMs, {void Function(String)? onError}) async {
-    if (accessToken.isEmpty) {
-      print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
-      _handleInvalidToken();
-      return;
-    }
+    if (!await _verifyToken()) return;
     if (_seekInProgress) {
       _pendingSeekMs = positionMs;
       return;
@@ -347,7 +359,7 @@ class PlayerProvider extends ChangeNotifier {
     final response = await http.put(
       url,
       headers: {
-        'Authorization': 'Bearer $accessToken',
+        'Authorization': 'Bearer $_accessToken',
       },
     );
     if (response.statusCode == 200 || response.statusCode == 204) {
@@ -357,7 +369,7 @@ class PlayerProvider extends ChangeNotifier {
         final responseGet = await http.get(
           urlGet,
           headers: {
-            'Authorization': 'Bearer $accessToken',
+            'Authorization': 'Bearer $_accessToken',
           },
         );
         if (responseGet.statusCode == 200) {
@@ -397,11 +409,7 @@ class PlayerProvider extends ChangeNotifier {
 
   /// Reanuda la reproducción desde la posición actual de la canción
   Future<void> resume({void Function(String)? onError}) async {
-    if (accessToken.isEmpty) {
-      print('[PlayerProvider] accessToken vacío. Redirigiendo a login.');
-      _handleInvalidToken();
-      return;
-    }
+    if (!await _verifyToken()) return;
   if (isProcessing) {
     print('[resume] Ignorado: acción en curso.');
     return;
@@ -409,7 +417,7 @@ class PlayerProvider extends ChangeNotifier {
   isProcessing = true;
   print('[resume] Intentando reanudar. Posición guardada: \\${currentSong?.positionMs} ms');
     if (currentSong == null) return;
-    final deviceId = await getActiveDeviceId(accessToken);
+    final deviceId = await getActiveDeviceId(_accessToken);
     if (deviceId == null) {
       if (onError != null) {
         onError('No hay ningún dispositivo de reproducción activo.');
@@ -422,7 +430,7 @@ class PlayerProvider extends ChangeNotifier {
     final response = await http.put(
       url,
       headers: {
-        'Authorization': 'Bearer $accessToken',
+        'Authorization': 'Bearer $_accessToken',
         'Content-Type': 'application/json',
       },
       body: jsonEncode({}),
@@ -437,7 +445,7 @@ class PlayerProvider extends ChangeNotifier {
         final responseGet = await http.get(
           urlGet,
           headers: {
-            'Authorization': 'Bearer $accessToken',
+            'Authorization': 'Bearer $_accessToken',
           },
         );
         if (responseGet.statusCode == 200) {
@@ -465,7 +473,7 @@ class PlayerProvider extends ChangeNotifier {
         final responseGet = await http.get(
           urlGet,
           headers: {
-            'Authorization': 'Bearer $accessToken',
+            'Authorization': 'Bearer $_accessToken',
           },
         );
         if (responseGet.statusCode == 200) {
