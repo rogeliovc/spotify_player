@@ -4,33 +4,33 @@ import 'package:http/http.dart' as http;
 import '../utils/spotify_device_utils.dart';
 import '../models/song_model.dart';
 import '../services/auth_service.dart';
-import '../main.dart';
+import '../screens/home_screen_login.dart';
 import 'dart:async';
 
 class PlayerProvider extends ChangeNotifier {
   bool isProcessing = false;
-  String _accessToken;
-  final AuthService _authService = AuthService();
+  String _accessToken = '';
+  final AuthService _authService;
 
-  PlayerProvider({required String accessToken}) : _accessToken = accessToken;
+  PlayerProvider(this._authService);
 
-  BuildContext? appContext;
+  BuildContext? _context;
 
   void setContext(BuildContext context) {
-    appContext = context;
+    _context = context;
   }
 
   void _handleInvalidToken() async {
     // Borra token y navega al login
     await _authService.signOut();
-    if (appContext != null) {
-      ScaffoldMessenger.of(appContext!).showSnackBar(
+    if (_context != null) {
+      ScaffoldMessenger.of(_context!).showSnackBar(
         const SnackBar(
           content: Text('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'),
           duration: Duration(seconds: 3),
         ),
       );
-      Navigator.of(appContext!).pushAndRemoveUntil(
+      Navigator.of(_context!).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomeScreenLogin()),
         (route) => false,
       );

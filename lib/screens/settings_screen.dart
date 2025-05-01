@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
+import 'home_screen_login.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -14,6 +17,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Map<String, dynamic>? userInfo;
   bool loading = true;
   String? error;
+  bool _notificationsEnabled = true;
+  String _selectedLanguage = 'Español';
 
   @override
   void initState() {
@@ -47,72 +52,221 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _logout() async {
+    try {
+      final auth = AuthService();
+      await auth.signOut();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sesión cerrada correctamente')),
+        );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreenLogin()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cerrar sesión: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return Scaffold(
+      backgroundColor: themeProvider.theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Ajustes'),
-        backgroundColor: const Color(0xFF0E1928),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Configuración',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
-      backgroundColor: const Color(0xFF0E1928),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Sección de Perfil
+            _buildSectionTitle('Perfil'),
+            if (loading)
+              const Center(child: CircularProgressIndicator())
+            else if (error != null)
+              Text(error!, style: const TextStyle(color: Colors.redAccent))
+            else if (userInfo != null)
+              _buildProfileCard(userInfo!),
+            const SizedBox(height: 24),
+
+            // Sección de Preferencias
+            _buildSectionTitle('Preferencias'),
+            _buildPreferenceCard(
+              icon: Icons.notifications,
+              title: 'Notificaciones',
+              trailing: Switch(
+                value: _notificationsEnabled,
+                onChanged: (value) => setState(() => _notificationsEnabled = value),
+                activeColor: const Color(0xFFe0c36a),
+              ),
+            ),
+            _buildPreferenceCard(
+              icon: Icons.language,
+              title: 'Idioma',
+              trailing: DropdownButton<String>(
+                value: _selectedLanguage,
+                dropdownColor: themeProvider.theme.cardColor,
+                style: TextStyle(color: themeProvider.theme.textTheme.bodyLarge?.color),
+                underline: Container(),
+                items: ['Español', 'English', 'Français'].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() => _selectedLanguage = newValue);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Sección de Cuenta
+            _buildSectionTitle('Cuenta'),
+            _buildPreferenceCard(
+              icon: Icons.privacy_tip,
+              title: 'Privacidad',
+              onTap: () {
+                // TODO: Implementar pantalla de privacidad
+              },
+            ),
+            _buildPreferenceCard(
+              icon: Icons.help,
+              title: 'Ayuda y Soporte',
+              onTap: () {
+                // TODO: Implementar pantalla de ayuda
+              },
+            ),
+            _buildPreferenceCard(
+              icon: Icons.info,
+              title: 'Acerca de',
+              onTap: () {
+                // TODO: Implementar pantalla de información
+              },
+            ),
+            const SizedBox(height: 24),
+
+            // Botón de Cerrar Sesión
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: _logout,
+                icon: const Icon(Icons.logout),
+                label: const Text('Cerrar Sesión'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red[900],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileCard(Map<String, dynamic> user) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
         children: [
-          const Text('Información del usuario', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-          const SizedBox(height: 18),
-          if (loading)
-            const Center(child: CircularProgressIndicator()),
-          if (error != null)
-            Text(error!, style: const TextStyle(color: Colors.redAccent)),
-          if (!loading && userInfo != null)
-            _userInfoSection(userInfo!),
-          const SizedBox(height: 40),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text('Cerrar sesión', style: TextStyle(color: Colors.redAccent)),
-            onTap: () async {
-              final auth = AuthService();
-              await auth.signOut();
-              await auth.authenticate();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sesión cerrada correctamente')),
-                );
-                Navigator.of(context).pop();
-              }
-            },
+          if (user['images'] != null && user['images'].isNotEmpty)
+            CircleAvatar(
+              backgroundImage: NetworkImage(user['images'][0]['url']),
+              radius: 35,
+            )
+          else
+            const CircleAvatar(
+              radius: 35,
+              backgroundColor: Colors.grey,
+              child: Icon(Icons.person, color: Colors.white, size: 35),
+            ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user['display_name'] ?? 'Usuario',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (user['email'] != null)
+                  Text(
+                    user['email'],
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                if (user['country'] != null)
+                  Text(
+                    'País: ${user['country']}',
+                    style: const TextStyle(color: Colors.white38, fontSize: 13),
+                  ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _userInfoSection(Map<String, dynamic> user) {
-    return Row(
-      children: [
-        if (user['images'] != null && user['images'].isNotEmpty)
-          CircleAvatar(
-            backgroundImage: NetworkImage(user['images'][0]['url']),
-            radius: 35,
-          )
-        else
-          const CircleAvatar(radius: 35, backgroundColor: Colors.grey),
-        const SizedBox(width: 18),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(user['display_name'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-              if (user['email'] != null)
-                Text(user['email'], style: const TextStyle(color: Colors.white70)),
-              if (user['id'] != null)
-                Text('ID: ${user['id']}', style: const TextStyle(color: Colors.white38, fontSize: 13)),
-              if (user['country'] != null)
-                Text('País: ${user['country']}', style: const TextStyle(color: Colors.white38, fontSize: 13)),
-            ],
-          ),
-        ),
-      ],
+  Widget _buildPreferenceCard({
+    required IconData icon,
+    required String title,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    return Card(
+      color: Theme.of(context).cardColor,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: ListTile(
+        leading: Icon(icon, color: const Color(0xFFe0c36a)),
+        title: Text(title),
+        trailing: trailing,
+        onTap: onTap,
+      ),
     );
   }
 }
