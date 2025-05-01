@@ -38,7 +38,7 @@ class TaskManagerScreen extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Tareas', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                const Text('Actividades', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 if (taskProvider.tasks.isEmpty)
                   Container(
@@ -50,7 +50,7 @@ class TaskManagerScreen extends StatelessWidget {
                     ),
                     child: const Center(
                       child: Text(
-                        'No hay tareas pendientes',
+                        'No hay actividades pendientes',
                         style: TextStyle(color: Colors.black54, fontSize: 16),
                       ),
                     ),
@@ -246,7 +246,7 @@ class _TaskAdderState extends State<TaskAdder> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Nueva tarea', style: TextStyle(fontFamily: 'Serif', color: Colors.white)),
+        title: const Text('Nueva actividad', style: TextStyle(fontFamily: 'Serif', color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
@@ -412,7 +412,7 @@ class _TaskAdderState extends State<TaskAdder> {
                       Navigator.pop(context);
                     }
                   },
-                  child: const Text('Agregar tarea'),
+                  child: const Text('Agregar actividad'),
                 ),
               ),
             ],
