@@ -3,12 +3,26 @@ import 'package:provider/provider.dart';
 import '../models/task_model.dart';
 import 'task_details.dart';
 
+import '../services/task_storage.dart';
+
 class TaskProvider with ChangeNotifier {
+  final TaskStorage _storage = TaskStorage();
   final List<Task> _tasks = [];
 
   List<Task> get tasks => List.unmodifiable(_tasks);
 
-  void addTask(Task task) {
+  TaskProvider() {
+    _loadTasks();
+  }
+
+  Future<void> _loadTasks() async {
+    final tasks = await _storage.loadTasks();
+    _tasks.clear();
+    _tasks.addAll(tasks);
+    notifyListeners();
+  }
+
+  Future<void> addTask(Task task) async {
     _tasks.add(Task(
       title: task.title,
       description: task.description,
@@ -24,10 +38,11 @@ class TaskProvider with ChangeNotifier {
       tempo: task.tempo ?? 120,
       completed: task.completed,
     ));
+    await _storage.saveTasks(_tasks);
     notifyListeners();
   }
 
-  void toggleTaskCompleted(int index) {
+  Future<void> toggleTaskCompleted(int index) async {
     final t = _tasks[index];
     _tasks[index] = Task(
       title: t.title,
@@ -44,6 +59,7 @@ class TaskProvider with ChangeNotifier {
       tempo: t.tempo,
       completed: !t.completed,
     );
+    await _storage.saveTasks(_tasks);
     notifyListeners();
   }
 }
