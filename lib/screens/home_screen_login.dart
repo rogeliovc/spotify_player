@@ -36,6 +36,57 @@ class _HomeScreenLoginState extends State<HomeScreenLogin> {
     }
   }
 
+  Future<void> _exchangeToken() async {
+    final TextEditingController controller = TextEditingController();
+    
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Intercambiar Token'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Pega tu código de autorización aquí',
+          ),
+          maxLines: 1,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final code = controller.text.trim();
+              if (code.isEmpty) {
+                setState(() {
+                  _error = 'Por favor, ingresa un código válido';
+                });
+                return;
+              }
+
+              try {
+                final auth = AuthService();
+                await auth.exchangeManualCode(code);
+                if (mounted) {
+                  Navigator.pop(context);
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const MainPlayerScreen()),
+                  );
+                }
+              } catch (e) {
+                setState(() {
+                  _error = 'Error al intercambiar el token: ${e.toString()}';
+                });
+              }
+            },
+            child: const Text('Intercambiar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,6 +152,17 @@ class _HomeScreenLoginState extends State<HomeScreenLogin> {
                       ),
                     ),
                   ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: _exchangeToken,
+                  child: const Text(
+                    'Intercambiar token manualmente',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
                 
                 // Mensaje de error
                 if (_error != null) ...[
