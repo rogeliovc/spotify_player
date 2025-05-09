@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/task_model.dart';
+import 'task_details.dart';
 
 class TaskProvider with ChangeNotifier {
   final List<Task> _tasks = [];
@@ -8,7 +9,21 @@ class TaskProvider with ChangeNotifier {
   List<Task> get tasks => List.unmodifiable(_tasks);
 
   void addTask(Task task) {
-    _tasks.add(task);
+    _tasks.add(Task(
+      title: task.title,
+      description: task.description,
+      dueDate: task.dueDate,
+      taskType: task.taskType,
+      classical: task.classical ?? 0.0,
+      lofi: task.lofi ?? 0.0,
+      electronic: task.electronic ?? 0.0,
+      jazz: task.jazz ?? 0.0,
+      rock: task.rock ?? 0.0,
+      energyLevel: task.energyLevel ?? 0.5,
+      valence: task.valence ?? 0.5,
+      tempo: task.tempo ?? 120,
+      completed: task.completed,
+    ));
     notifyListeners();
   }
 
@@ -18,8 +33,15 @@ class TaskProvider with ChangeNotifier {
       title: t.title,
       description: t.description,
       dueDate: t.dueDate,
-      priority: t.priority,
-      label: t.label,
+      taskType: t.taskType,
+      classical: t.classical,
+      lofi: t.lofi,
+      electronic: t.electronic,
+      jazz: t.jazz,
+      rock: t.rock,
+      energyLevel: t.energyLevel,
+      valence: t.valence,
+      tempo: t.tempo,
       completed: !t.completed,
     );
     notifyListeners();
@@ -82,7 +104,7 @@ class TaskManagerScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Hasta: ${_dueDateText(t.dueDate)}',
+                            'Hasta: ${_dueDateText(t.dueDate)}',
                             style: const TextStyle(color: Colors.white70, fontSize: 13),
                           ),
                           const SizedBox(height: 4),
@@ -95,20 +117,35 @@ class TaskManagerScreen extends StatelessWidget {
                           const SizedBox(height: 7),
                           Row(
                             children: [
-                              _priorityChip(t.priority),
+                              _taskTypeChip(t.taskType),
                               const SizedBox(width: 6),
-                              _labelChip(t.label),
+                              _energyLevelChip(t.energyLevel),
                             ],
                           ),
                         ],
                       ),
-                      trailing: IconButton(
-                        icon: Icon(
-                          t.completed ? Icons.check_circle : Icons.radio_button_unchecked,
-                          color: t.completed ? Colors.green : Colors.white38,
-                        ),
-                        onPressed: () => taskProvider.toggleTaskCompleted(i),
+                      trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        t.completed ? Icons.check_circle : Icons.radio_button_unchecked,
+                        color: t.completed ? Colors.green : Colors.white38,
                       ),
+                      onPressed: () => taskProvider.toggleTaskCompleted(i),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.info_outline, color: Colors.white70),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => TaskDetailsScreen(task: t),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
                     ),
                   );
                 }).toList(),
@@ -135,32 +172,26 @@ class TaskManagerScreen extends StatelessWidget {
   }
 
   String _dueDateText(DateTime date) {
-    final now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
-      return 'Hoy';
-    } else if (date.isBefore(now)) {
-      return 'Ayer';
-    } else if (date.difference(now).inDays == 1) {
-      return 'Mañana';
-    } else {
-      return '${date.day}/${date.month}/${date.year}';
-    }
+    return '${date.day}/${date.month}/${date.year}';
   }
 
-  Widget _priorityChip(String priority) {
+  Widget _taskTypeChip(String taskType) {
     Color color;
-    switch (priority) {
-      case 'Urgente':
-        color = Colors.red;
+    switch (taskType) {
+      case 'study':
+        color = Colors.blue;
         break;
-      case 'Alta':
+      case 'exercise':
+        color = Colors.green;
+        break;
+      case 'relax':
+        color = Colors.purple;
+        break;
+      case 'creative':
         color = Colors.orange;
         break;
-      case 'Media':
-        color = Colors.yellow[800]!;
-        break;
-      case 'Baja':
-        color = Colors.green[700]!;
+      case 'work':
+        color = Colors.teal;
         break;
       default:
         color = Colors.grey;
@@ -172,58 +203,26 @@ class TaskManagerScreen extends StatelessWidget {
         border: Border.all(color: color, width: 1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(priority, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+      child: Text(taskType, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
     );
   }
 
-  Widget _labelChip(String label) {
-    Color color;
-    Color textColor = Colors.black;
-    switch (label) {
-      case 'Investigación':
-        color = Colors.blue[900]!;
-        textColor = Colors.white;
-        break;
-      case 'Estudio':
-        color = Colors.orange[300]!;
-        break;
-      case 'Ejercicio':
-        color = Colors.green[300]!;
-        break;
-      case 'Viaje':
-        color = Colors.purple[200]!;
-        break;
-      case 'Trabajo':
-        color = Colors.teal[200]!;
-        break;
-      case 'Personal':
-        color = Colors.pink[200]!;
-        break;
-      case 'Salud':
-        color = Colors.red[200]!;
-        break;
-      case 'Finanzas':
-        color = Colors.amber[300]!;
-        break;
-      case 'Otro':
-        color = Colors.grey[400]!;
-        break;
-      default:
-        color = Colors.grey;
-    }
+  Widget _energyLevelChip(double energyLevel) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.18),
-        border: Border.all(color: color, width: 1),
+        color: Colors.green.withOpacity(0.15),
+        border: Border.all(color: Colors.green, width: 1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(label, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 13)),
+      child: Text(
+        'Energía: ${(energyLevel * 100).round()}%',
+        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+      ),
     );
   }
 }
 
-// Pantalla para agregar tarea
 class TaskAdder extends StatefulWidget {
   const TaskAdder({super.key});
 
@@ -236,8 +235,75 @@ class _TaskAdderState extends State<TaskAdder> {
   String _title = '';
   String _description = '';
   DateTime? _dueDate;
-  String _priority = 'Urgente';
-  String _label = 'Investigación';
+  String _taskType = 'Investigación';
+  bool _classical = false;
+  bool _lofi = false;
+  bool _electronic = false;
+  bool _jazz = false;
+  bool _rock = false;
+  bool _isFormValid = false;
+  double _energyLevel = 0.5;
+  double _valence = 0.5;
+  int _tempo = 120;
+
+  void _createTask() {
+    if (_dueDate == null) return;
+    
+    context.read<TaskProvider>().addTask(
+      Task(
+        title: _title,
+        description: _description,
+        dueDate: _dueDate!,
+        taskType: _taskType,
+        classical: _classical ? 1.0 : 0.0,
+        lofi: _lofi ? 1.0 : 0.0,
+        electronic: _electronic ? 1.0 : 0.0,
+        jazz: _jazz ? 1.0 : 0.0,
+        rock: _rock ? 1.0 : 0.0,
+        energyLevel: _energyLevel,
+        valence: _valence,
+        tempo: _tempo,
+      ),
+    );
+    Navigator.pop(context);
+  }
+
+  void _validateForm() {
+    setState(() {
+      _isFormValid = _title.isNotEmpty && _dueDate != null && (
+        _classical || _lofi || _electronic || _jazz || _rock
+      );
+    });
+  }
+
+  final List<String> _taskTypes = [
+    'Investigación',
+    'Estudio',
+    'Ejercicio',
+    'Viaje',
+    'Trabajo'
+  ];
+
+  String _dueDateText(DateTime? date) {
+    if (date == null) return 'Sin fecha';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Widget _buildGenreChip(String genre, bool isSelected, Function(bool) onChanged) {
+    return ChoiceChip(
+      label: Text(
+        genre,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.white70,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: Colors.blue,
+      backgroundColor: Colors.transparent,
+      onSelected: onChanged,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -265,155 +331,167 @@ class _TaskAdderState extends State<TaskAdder> {
                   focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
                 ),
                 style: const TextStyle(color: Colors.white),
-                validator: (v) => v == null || v.isEmpty ? 'Campo requerido' : null,
-                onSaved: (v) => _title = v ?? '',
+                onChanged: (value) {
+                  _title = value;
+                  _validateForm();
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Por favor ingresa un título';
+                  }
+                  return null;
+                },
               ),
-              const SizedBox(height: 12),
-              const Text('Fecha límite', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              InkWell(
-                onTap: () async {
-                  final picked = await showDatePicker(
+              const SizedBox(height: 16),
+              TextFormField(
+                decoration: const InputDecoration(
+                  hintText: 'Agrega una descripción...',
+                  hintStyle: TextStyle(color: Colors.white54),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white38)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+                ),
+                style: const TextStyle(color: Colors.white),
+                maxLines: 3,
+                onChanged: (value) => _description = value,
+              ),
+              const SizedBox(height: 16),
+              Text('¿Qué tipo de tarea es?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: DropdownButtonFormField<String>(
+                  value: _taskType,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                  ),
+                  items: _taskTypes.map((type) {
+                    return DropdownMenuItem(
+                      value: type,
+                      child: Text(
+                        type,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() => _taskType = value!);
+                    _validateForm();
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  final dueDate = await showDatePicker(
                     context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                    initialDate: _dueDate ?? DateTime.now(),
+                    firstDate: DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                   );
-                  if (picked != null) setState(() => _dueDate = picked);
+                  if (dueDate != null) {
+                    setState(() => _dueDate = dueDate);
+                    _validateForm();
+                  }
                 },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    _dueDate == null ? 'dd/mm/aaaa' : '${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}',
-                    style: TextStyle(color: _dueDate == null ? Colors.white54 : Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Text('Asignar prioridad', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              Wrap(
-                spacing: 8,
-                children: [
-                  ChoiceChip(
-                    label: const Text('Urgente'),
-                    selected: _priority == 'Urgente',
-                    selectedColor: Colors.red[700],
-                    onSelected: (_) => setState(() => _priority = 'Urgente'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Alta'),
-                    selected: _priority == 'Alta',
-                    selectedColor: Colors.orange[700],
-                    onSelected: (_) => setState(() => _priority = 'Alta'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Media'),
-                    selected: _priority == 'Media',
-                    selectedColor: Colors.yellow[700],
-                    onSelected: (_) => setState(() => _priority = 'Media'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Baja'),
-                    selected: _priority == 'Baja',
-                    selectedColor: Colors.green[700],
-                    onSelected: (_) => setState(() => _priority = 'Baja'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text('Etiqueta', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              Wrap(
-                spacing: 8,
-                children: [
-                  ChoiceChip(
-                    label: const Text('Investigación', style: TextStyle(color: Colors.black)),
-                    selected: _label == 'Investigación',
-                    selectedColor: Colors.blue[900],
-                    backgroundColor: Colors.white,
-                    onSelected: (_) => setState(() => _label = 'Investigación'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Estudio'),
-                    selected: _label == 'Estudio',
-                    selectedColor: Colors.orange[300],
-                    labelStyle: const TextStyle(color: Colors.black),
-                    onSelected: (_) => setState(() => _label = 'Estudio'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Ejercicio'),
-                    selected: _label == 'Ejercicio',
-                    selectedColor: Colors.green[300],
-                    labelStyle: const TextStyle(color: Colors.black),
-                    onSelected: (_) => setState(() => _label = 'Ejercicio'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Viaje'),
-                    selected: _label == 'Viaje',
-                    selectedColor: Colors.purple[200],
-                    labelStyle: const TextStyle(color: Colors.black),
-                    onSelected: (_) => setState(() => _label = 'Viaje'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Trabajo'),
-                    selected: _label == 'Trabajo',
-                    selectedColor: Colors.teal[200],
-                    labelStyle: const TextStyle(color: Colors.black),
-                    onSelected: (_) => setState(() => _label = 'Trabajo'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Personal'),
-                    selected: _label == 'Personal',
-                    selectedColor: Colors.pink[200],
-                    labelStyle: const TextStyle(color: Colors.black),
-                    onSelected: (_) => setState(() => _label = 'Personal'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Salud'),
-                    selected: _label == 'Salud',
-                    selectedColor: Colors.red[200],
-                    labelStyle: const TextStyle(color: Colors.black),
-                    onSelected: (_) => setState(() => _label = 'Salud'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Finanzas'),
-                    selected: _label == 'Finanzas',
-                    selectedColor: Colors.amber[300],
-                    labelStyle: const TextStyle(color: Colors.black),
-                    onSelected: (_) => setState(() => _label = 'Finanzas'),
-                  ),
-                  ChoiceChip(
-                    label: const Text('Otro'),
-                    selected: _label == 'Otro',
-                    selectedColor: Colors.grey[400],
-                    labelStyle: const TextStyle(color: Colors.black),
-                    onSelected: (_) => setState(() => _label = 'Otro'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              Center(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CB3F4),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate() && _dueDate != null) {
-                      _formKey.currentState!.save();
-                      Provider.of<TaskProvider>(context, listen: false).addTask(
-                        Task(
-                          title: _title,
-                          description: _description,
-                          dueDate: _dueDate!,
-                          priority: _priority,
-                          label: _label,
-                        ),
-                      );
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: const Text('Agregar tarea'),
+                child: Text(
+                  'Fecha límite: ${_dueDateText(_dueDate)}',
+                  style: const TextStyle(color: Colors.white),
                 ),
+              ),
+              const SizedBox(height: 16),
+              Text('¿Qué tipo de música prefieres?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    _buildGenreChip('Clásica', _classical, (value) => setState(() {
+                      _classical = value;
+                      _validateForm();
+                    })),
+                    _buildGenreChip('Lo-fi', _lofi, (value) => setState(() {
+                      _lofi = value;
+                      _validateForm();
+                    })),
+                    _buildGenreChip('Electrónica', _electronic, (value) => setState(() {
+                      _electronic = value;
+                      _validateForm();
+                    })),
+                    _buildGenreChip('Jazz', _jazz, (value) => setState(() {
+                      _jazz = value;
+                      _validateForm();
+                    })),
+                    _buildGenreChip('Rock', _rock, (value) => setState(() {
+                      _rock = value;
+                      _validateForm();
+                    })),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Selecciona los géneros musicales que prefieres para tu tarea',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 16),
+              Text('¿Qué estado de ánimo prefieres?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white12,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Slider(
+                      value: _valence,
+                      min: 0,
+                      max: 1,
+                      divisions: 10,
+                      label: '${(_valence * 100).round()}%',
+                      activeColor: Colors.blue,
+                      inactiveColor: Colors.white38,
+                      onChanged: (value) {
+                        setState(() => _valence = value);
+                      },
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Triste', style: TextStyle(color: Colors.white70)),
+                        Text('${(_valence * 100).round()}%', style: const TextStyle(color: Colors.white)),
+                        const Text('Feliz', style: TextStyle(color: Colors.white70)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isFormValid ? _createTask : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isFormValid ? Colors.blue : Colors.grey,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Agregar Tarea', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),

@@ -7,6 +7,7 @@ import 'services/auth_service.dart';
 import 'screens/main_player_screen.dart';
 import 'screens/task_manager.dart';
 import 'screens/home_screen_login.dart';
+import 'models/task_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +21,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => themeProvider),
         ChangeNotifierProvider(create: (_) => playerProvider),
+        ChangeNotifierProvider(create: (_) => TaskProvider()),
       ],
       child: MyApp(authService: authService),
     ),
