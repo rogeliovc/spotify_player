@@ -21,39 +21,64 @@ class PlayerProvider extends ChangeNotifier {
   }
 
   void _handleInvalidToken() async {
-    // Borra token y navega al login
-    await _authService.signOut();
-    if (_context != null) {
-      ScaffoldMessenger.of(_context!).showSnackBar(
-        const SnackBar(
-          content: Text('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
-      Navigator.of(_context!).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreenLogin()),
-        (route) => false,
-      );
+    try {
+      // Intenta obtener un nuevo token antes de cerrar sesión
+      final token = await _authService.getAccessToken();
+      if (token != null) {
+        _accessToken = token;
+        return;
+      }
+
+      // Si no se pudo obtener un nuevo token, procede a cerrar sesión
+      await _authService.signOut();
+      if (_context != null) {
+        ScaffoldMessenger.of(_context!).showSnackBar(
+          const SnackBar(
+            content: Text('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        Navigator.of(_context!).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomeScreenLogin()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      print('[PlayerProvider] Error en _handleInvalidToken: $e');
     }
   }
 
   Future<bool> _verifyToken() async {
-    if (_accessToken.isEmpty) {
-      _handleInvalidToken();
+    try {
+      // Si no tenemos token, intentamos obtener uno
+      if (_accessToken.isEmpty) {
+        _accessToken = (await _authService.getAccessToken()) ?? '';
+        if (_accessToken.isEmpty) {
+          print('[PlayerProvider] No se pudo obtener token inicial');
+          return false;
+        }
+      }
+
+      // Verifica si el token es válido
+      final isValid = await _authService.isTokenValid();
+      if (!isValid) {
+        // Intenta refrescar el token
+        final refreshed = await _authService.refreshAccessToken();
+        if (refreshed) {
+          // Si se refrescó exitosamente, actualiza el token
+          _accessToken = (await _authService.getAccessToken()) ?? '';
+          return true;
+        } else {
+          // Si falla el refresh, registra el error pero no cierra sesión inmediatamente
+          print('[PlayerProvider] Falló el refresh del token');
+          return false;
+        }
+      }
+      return true;
+    } catch (e) {
+      print('[PlayerProvider] Error en _verifyToken: $e');
       return false;
     }
-
-    final isValid = await _authService.isTokenValid();
-    if (!isValid) {
-      final refreshed = await _authService.refreshAccessToken();
-      if (!refreshed) {
-        _handleInvalidToken();
-        return false;
-      }
-      // Actualiza el token en el provider
-      _accessToken = (await _authService.getAccessToken()) ?? '';
-    }
-    return true;
   }
 
   Song? currentSong;
