@@ -12,6 +12,7 @@ import '../services/auth_service.dart';
 import 'mini_player.dart';
 import '../utils/spotify_search.dart';
 import '../widgets/spotify_search_field.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class MainPlayerScreen extends StatefulWidget {
   const MainPlayerScreen({super.key});
@@ -22,6 +23,9 @@ class MainPlayerScreen extends StatefulWidget {
 
 class _MainPlayerScreenState extends State<MainPlayerScreen> {
   int _selectedTab = 1; // 0: Player, 1: Home, 2: Tasks
+
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
 
   Future<List<SpotifyDevice>> getSpotifyDevices(BuildContext context) async {
     final auth = AuthService();
@@ -66,19 +70,25 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                         ),
                         title: Text(d.name),
                         subtitle: Text(d.type),
-                        trailing: d.isActive ? const Text('Activo', style: TextStyle(color: Colors.green)) : null,
+                        trailing: d.isActive
+                            ? const Text('Activo',
+                                style: TextStyle(color: Colors.green))
+                            : null,
                         onTap: () async {
                           Navigator.of(context).pop();
                           final auth = AuthService();
                           final token = await auth.getAccessToken();
                           if (token == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('No hay sesión activa de Spotify.')),
+                              const SnackBar(
+                                  content:
+                                      Text('No hay sesión activa de Spotify.')),
                             );
                             return;
                           }
                           final response = await http.put(
-                            Uri.parse('https://api.spotify.com/v1/me/player/transfer'),
+                            Uri.parse(
+                                'https://api.spotify.com/v1/me/player/transfer'),
                             headers: {
                               'Authorization': 'Bearer $token',
                               'Content-Type': 'application/json',
@@ -90,14 +100,18 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                           );
                           if (response.statusCode == 204) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Transferido a: ${d.name}')),
+                              SnackBar(
+                                  content: Text('Transferido a: ${d.name}')),
                             );
                           } else {
-                            String errorMsg = 'No se pudo transferir (${response.statusCode})';
+                            String errorMsg =
+                                'No se pudo transferir (${response.statusCode})';
                             try {
-                              final Map<String, dynamic> errorBody = json.decode(response.body);
+                              final Map<String, dynamic> errorBody =
+                                  json.decode(response.body);
                               if (errorBody.containsKey('error')) {
-                                errorMsg += ': ' + (errorBody['error']['message'] ?? '');
+                                errorMsg += ': ' +
+                                    (errorBody['error']['message'] ?? '');
                               }
                             } catch (_) {}
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -144,7 +158,12 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Sincronía', style: TextStyle(fontFamily: 'Serif', fontSize: 28, color: Colors.white, letterSpacing: 1)),
+        title: const Text('Sincronía',
+            style: TextStyle(
+                fontFamily: 'Serif',
+                fontSize: 28,
+                color: Colors.white,
+                letterSpacing: 1)),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.settings, color: Colors.white70),
@@ -180,29 +199,42 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                         color: const Color(0xFF182B45),
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: Icon(Icons.music_note, color: _selectedTab == 0 ? Colors.white : Colors.white.withOpacity(0.6)),
+                            icon: Icon(Icons.music_note,
+                                color: _selectedTab == 0
+                                    ? Colors.white
+                                    : Colors.white.withOpacity(0.6)),
                             onPressed: () => setState(() => _selectedTab = 0),
                           ),
                           const SizedBox(width: 8),
                           Container(
                             decoration: BoxDecoration(
-                              color: _selectedTab == 1 ? Colors.white : Colors.transparent,
+                              color: _selectedTab == 1
+                                  ? Colors.white
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(18),
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 4),
                             child: IconButton(
-                              icon: Icon(Icons.home, color: _selectedTab == 1 ? const Color(0xFF182B45) : Colors.white.withOpacity(0.6)),
+                              icon: Icon(Icons.home,
+                                  color: _selectedTab == 1
+                                      ? const Color(0xFF182B45)
+                                      : Colors.white.withOpacity(0.6)),
                               onPressed: () => setState(() => _selectedTab = 1),
                             ),
                           ),
                           const SizedBox(width: 8),
                           IconButton(
-                            icon: Icon(Icons.calendar_today, color: _selectedTab == 2 ? Colors.white : Colors.white.withOpacity(0.6)),
+                            icon: Icon(Icons.calendar_today,
+                                color: _selectedTab == 2
+                                    ? Colors.white
+                                    : Colors.white.withOpacity(0.6)),
                             onPressed: () => setState(() => _selectedTab = 2),
                           ),
                         ],
@@ -212,10 +244,10 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                   const SizedBox(height: 20),
                   Expanded(
                     child: _selectedTab == 1
-                      ? _buildHomeContent()
-                      : _selectedTab == 2
-                        ? _buildTaskManager()
-                        : _buildPlayerContent(),
+                        ? _buildCalendarOnly()
+                        : _selectedTab == 2
+                            ? _buildTaskManager()
+                            : _buildPlayerContent(),
                   ),
                 ],
               ),
@@ -228,12 +260,38 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
     );
   }
 
-  Widget _buildHomeContent() {
-    return Center(
-      child: Text(
-        '¡Bienvenido a Sincronía! Elige una sección para explorar tu música.',
-        style: TextStyle(color: Colors.white, fontSize: 20),
-        textAlign: TextAlign.center,
+  Widget _buildCalendarOnly() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: TableCalendar(
+        firstDay: DateTime.utc(2020, 1, 1),
+        lastDay: DateTime.utc(2030, 12, 31),
+        focusedDay: _focusedDay,
+        selectedDayPredicate: (day) =>
+            _selectedDay != null && isSameDay(_selectedDay, day),
+        onDaySelected: (selectedDay, focusedDay) {
+          setState(() {
+            _selectedDay = selectedDay;
+            _focusedDay = focusedDay;
+          });
+        },
+        calendarStyle: CalendarStyle(
+          todayDecoration: BoxDecoration(
+            color: Colors.blue.shade200,
+            shape: BoxShape.circle,
+          ),
+          selectedDecoration: BoxDecoration(
+            color: Colors.blue,
+            shape: BoxShape.circle,
+          ),
+        ),
+        headerStyle: HeaderStyle(
+          formatButtonVisible: false,
+          titleCentered: true,
+        ),
+        daysOfWeekStyle: DaysOfWeekStyle(
+          weekendStyle: TextStyle(color: Colors.blueGrey),
+        ),
       ),
     );
   }
@@ -244,19 +302,21 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Text(
           title,
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+          style: const TextStyle(
+              fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
     );
   }
 
-  SliverToBoxAdapter _buildHorizontalTrackList(Future<List<SpotifyTrack>> futureTracks) {
+  SliverToBoxAdapter _buildHorizontalTrackList(
+      Future<List<SpotifyTrack>> futureTracks) {
     return SliverToBoxAdapter(
       child: FutureBuilder<List<SpotifyTrack>>(
         future: futureTracks,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return SizedBox(
+            return const SizedBox(
               height: 180,
               child: Center(child: CircularProgressIndicator()),
             );
@@ -265,12 +325,17 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
             return SizedBox(
               height: 180,
               child: Center(
-                child: Text('Error: \\n${snapshot.error}', style: TextStyle(color: Colors.red[200])),
+                child: Text('Error: \\n${snapshot.error}',
+                    style: TextStyle(color: Colors.red[200])),
               ),
             );
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return SizedBox(height: 180, child: Center(child: Text('Sin canciones', style: TextStyle(color: Colors.white70))));
+            return const SizedBox(
+                height: 180,
+                child: Center(
+                    child: Text('Sin canciones',
+                        style: TextStyle(color: Colors.white70))));
           }
           final tracks = snapshot.data!;
           return SizedBox(
@@ -279,7 +344,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: tracks.length,
-              separatorBuilder: (_, __) => SizedBox(width: 16),
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
               itemBuilder: (context, index) {
                 final track = tracks[index];
                 return _buildTrackCard(track);
@@ -315,7 +380,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
             BoxShadow(
               color: Colors.black.withOpacity(0.25),
               blurRadius: 8,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -332,7 +397,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                   width: 140,
                   height: 140,
                   color: Colors.grey[900],
-                  child: Icon(Icons.music_note, color: Colors.white38, size: 48),
+                  child: const Icon(Icons.music_note,
+                      color: Colors.white38, size: 48),
                 ),
               ),
             ),
@@ -357,19 +423,24 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                       track.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15),
                     ),
                     Text(
                       track.artist,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                     Align(
                       alignment: Alignment.bottomRight,
                       child: Text(
                         track.duration,
-                        style: const TextStyle(color: Color(0xFFe0c36a), fontSize: 12),
+                        style: const TextStyle(
+                            color: Color(0xFFe0c36a), fontSize: 12),
                       ),
                     ),
                   ],
@@ -399,11 +470,14 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
   }
 
   // Favoritas: Top tracks
-  Future<List<SpotifyTrack>> _getFavoriteTracksFuture() async => _fetchTopTracks();
+  Future<List<SpotifyTrack>> _getFavoriteTracksFuture() async =>
+      _fetchTopTracks();
   // Reproducidas recientemente
-  Future<List<SpotifyTrack>> _getRecentlyPlayedFuture() async => _fetchRecentlyPlayed();
+  Future<List<SpotifyTrack>> _getRecentlyPlayedFuture() async =>
+      _fetchRecentlyPlayed();
   // Nuevos lanzamientos
-  Future<List<SpotifyTrack>> _getNewReleasesFuture() async => _fetchNewReleases();
+  Future<List<SpotifyTrack>> _getNewReleasesFuture() async =>
+      _fetchNewReleases();
 
   Future<List<SpotifyTrack>> _fetchTopTracks() async {
     final auth = AuthService();
@@ -417,7 +491,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         'Content-Type': 'application/json',
       },
     );
-    if (response.statusCode != 200) throw 'Error al obtener top tracks: \\n${response.body}';
+    if (response.statusCode != 200)
+      throw 'Error al obtener top tracks: \\n${response.body}';
     final data = json.decode(response.body);
     final items = data['items'] as List<dynamic>;
     return items.map(_spotifyTrackFromItem).toList();
@@ -427,7 +502,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
     final auth = AuthService();
     final token = await auth.getAccessToken();
     if (token == null) throw 'No se encontró el token de sesión de Spotify.';
-    final url = Uri.parse('https://api.spotify.com/v1/me/player/recently-played?limit=20');
+    final url = Uri.parse(
+        'https://api.spotify.com/v1/me/player/recently-played?limit=20');
     final response = await http.get(
       url,
       headers: {
@@ -435,7 +511,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         'Content-Type': 'application/json',
       },
     );
-    if (response.statusCode != 200) throw 'Error al obtener reproducidas recientemente: \\n${response.body}';
+    if (response.statusCode != 200)
+      throw 'Error al obtener reproducidas recientemente: \\n${response.body}';
     final data = json.decode(response.body);
     final items = data['items'] as List<dynamic>;
     return items.map((item) => _spotifyTrackFromItem(item['track'])).toList();
@@ -445,7 +522,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
     final auth = AuthService();
     final token = await auth.getAccessToken();
     if (token == null) throw 'No se encontró el token de sesión de Spotify.';
-    final url = Uri.parse('https://api.spotify.com/v1/browse/new-releases?limit=20');
+    final url =
+        Uri.parse('https://api.spotify.com/v1/browse/new-releases?limit=20');
     final response = await http.get(
       url,
       headers: {
@@ -453,7 +531,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         'Content-Type': 'application/json',
       },
     );
-    if (response.statusCode != 200) throw 'Error al obtener nuevos lanzamientos: \\n${response.body}';
+    if (response.statusCode != 200)
+      throw 'Error al obtener nuevos lanzamientos: \\n${response.body}';
     final data = json.decode(response.body);
     final items = (data['albums']['items'] as List<dynamic>);
     // Tomamos la primera canción de cada álbum
@@ -486,11 +565,14 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
     final duration = _formatDuration(Duration(milliseconds: durationMs));
     return SpotifyTrack(
       title: item['name'] ?? '',
-      artist: (item['artists'] as List).isNotEmpty ? item['artists'][0]['name'] : '',
-      duration: duration,
-      albumArtUrl: item['album'] != null && (item['album']['images'] as List).isNotEmpty
-          ? item['album']['images'][0]['url']
+      artist: (item['artists'] as List).isNotEmpty
+          ? item['artists'][0]['name']
           : '',
+      duration: duration,
+      albumArtUrl:
+          item['album'] != null && (item['album']['images'] as List).isNotEmpty
+              ? item['album']['images'][0]['url']
+              : '',
       uri: item['uri'] ?? '',
     );
   }
@@ -502,7 +584,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
 
   String _dueDateText(DateTime date) {
     final now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
       return 'Hoy';
     } else if (date.isBefore(now)) {
       return 'Ayer';
@@ -535,7 +619,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         border: Border.all(color: color, width: 1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(priority, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+      child: Text(priority,
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.bold, fontSize: 13)),
     );
   }
 
@@ -564,12 +650,17 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         border: Border.all(color: color, width: 1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(label, style: TextStyle(color: color == Colors.white ? Colors.black : color, fontWeight: FontWeight.bold, fontSize: 13)),
+      child: Text(label,
+          style: TextStyle(
+              color: color == Colors.white ? Colors.black : color,
+              fontWeight: FontWeight.bold,
+              fontSize: 13)),
     );
   }
 
   // Playlists del usuario
-  Future<List<SpotifyTrack>> _getUserPlaylistsFuture() async => _fetchUserPlaylists();
+  Future<List<SpotifyTrack>> _getUserPlaylistsFuture() async =>
+      _fetchUserPlaylists();
 
   Future<List<SpotifyTrack>> _fetchUserPlaylists() async {
     final auth = AuthService();
@@ -583,7 +674,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         'Content-Type': 'application/json',
       },
     );
-    if (response.statusCode != 200) throw 'Error al obtener playlists: \n${response.body}';
+    if (response.statusCode != 200)
+      throw 'Error al obtener playlists: \n${response.body}';
     final data = json.decode(response.body);
     final items = data['items'] as List<dynamic>;
     return items.map((item) {
@@ -603,11 +695,13 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
       onTap: () async {
         final auth = AuthService();
         final token = await auth.getAccessToken();
-        if (token == null) throw 'No se encontró el token de sesión de Spotify.';
-        
+        if (token == null)
+          throw 'No se encontró el token de sesión de Spotify.';
+
         // Obtener las canciones de la playlist
         final playlistId = playlist.uri.split(':').last;
-        final url = Uri.parse('https://api.spotify.com/v1/playlists/$playlistId/tracks');
+        final url = Uri.parse(
+            'https://api.spotify.com/v1/playlists/$playlistId/tracks');
         final response = await http.get(
           url,
           headers: {
@@ -615,8 +709,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
             'Content-Type': 'application/json',
           },
         );
-        if (response.statusCode != 200) throw 'Error al obtener canciones de la playlist: \n${response.body}';
-        
+        if (response.statusCode != 200)
+          throw 'Error al obtener canciones de la playlist: \n${response.body}';
+
         final data = json.decode(response.body);
         final items = data['items'] as List<dynamic>;
         final songs = items.map((item) {
@@ -624,7 +719,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
           final artists = track['artists'] as List<dynamic>? ?? [];
           final album = track['album'] as Map<String, dynamic>? ?? {};
           final images = album['images'] as List<dynamic>? ?? [];
-          
+
           return Song(
             id: track['id'] ?? '',
             title: track['name'] ?? '',
@@ -647,7 +742,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
             BoxShadow(
               color: Colors.black.withOpacity(0.25),
               blurRadius: 8,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -664,7 +759,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                   width: 140,
                   height: 140,
                   color: Colors.grey[900],
-                  child: Icon(Icons.playlist_play, color: Colors.white38, size: 48),
+                  child: const Icon(Icons.playlist_play,
+                      color: Colors.white38, size: 48),
                 ),
               ),
             ),
@@ -689,13 +785,17 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                       playlist.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15),
                     ),
                     Text(
                       playlist.artist,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                     const SizedBox(height: 4),
                     Align(
@@ -705,9 +805,11 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                           color: const Color(0xFFe0c36a).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: IconButton(
-                          icon: const Icon(Icons.play_circle_filled, color: Color(0xFFe0c36a), size: 24),
-                          onPressed: null, // El onTap del GestureDetector maneja la reproducción
+                        child: const IconButton(
+                          icon: Icon(Icons.play_circle_filled,
+                              color: Color(0xFFe0c36a), size: 24),
+                          onPressed:
+                              null, // El onTap del GestureDetector maneja la reproducción
                         ),
                       ),
                     ),
@@ -742,7 +844,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
             future: _getUserPlaylistsFuture(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return SizedBox(
+                return const SizedBox(
                   height: 180,
                   child: Center(child: CircularProgressIndicator()),
                 );
@@ -751,14 +853,17 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                 return SizedBox(
                   height: 180,
                   child: Center(
-                    child: Text('Error: \n${snapshot.error}', style: TextStyle(color: Colors.red[200])),
+                    child: Text('Error: \n${snapshot.error}',
+                        style: TextStyle(color: Colors.red[200])),
                   ),
                 );
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return SizedBox(
+                return const SizedBox(
                   height: 180,
-                  child: Center(child: Text('Sin playlists', style: TextStyle(color: Colors.white70))),
+                  child: Center(
+                      child: Text('Sin playlists',
+                          style: TextStyle(color: Colors.white70))),
                 );
               }
               final playlists = snapshot.data!;
@@ -768,7 +873,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: playlists.length,
-                  separatorBuilder: (_, __) => SizedBox(width: 16),
+                  separatorBuilder: (_, __) => const SizedBox(width: 16),
                   itemBuilder: (context, index) {
                     final playlist = playlists[index];
                     return _buildPlaylistCard(playlist);
@@ -784,7 +889,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         _buildHorizontalTrackList(_getRecentlyPlayedFuture()),
         _buildSectionTitle('Nuevos lanzamientos'),
         _buildHorizontalTrackList(_getNewReleasesFuture()),
-        SliverToBoxAdapter(child: SizedBox(height: 100)),
+        const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
     );
   }
@@ -792,7 +897,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
 
 class _SpotifyGlobalSearchPlayerContent extends StatefulWidget {
   final SliverToBoxAdapter Function(String) buildSectionTitle;
-  final SliverToBoxAdapter Function(Future<List<SpotifyTrack>>) buildHorizontalTrackList;
+  final SliverToBoxAdapter Function(Future<List<SpotifyTrack>>)
+      buildHorizontalTrackList;
   final Widget Function(SpotifyTrack) buildTrackCard;
   final Future<List<SpotifyTrack>> Function() getFavoriteTracksFuture;
   final Future<List<SpotifyTrack>> Function() getRecentlyPlayedFuture;
@@ -813,10 +919,12 @@ class _SpotifyGlobalSearchPlayerContent extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<_SpotifyGlobalSearchPlayerContent> createState() => _SpotifyGlobalSearchPlayerContentState();
+  State<_SpotifyGlobalSearchPlayerContent> createState() =>
+      _SpotifyGlobalSearchPlayerContentState();
 }
 
-class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchPlayerContent> {
+class _SpotifyGlobalSearchPlayerContentState
+    extends State<_SpotifyGlobalSearchPlayerContent> {
   final TextEditingController _searchController = TextEditingController();
   List<Song> _searchResults = [];
   bool _isSearching = false;
@@ -831,7 +939,9 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
       });
       return;
     }
-    setState(() { _isSearching = true; });
+    setState(() {
+      _isSearching = true;
+    });
     try {
       final results = await SpotifySearchService.searchTracks(query);
       setState(() {
@@ -879,7 +989,9 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
                   ? const SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.all(24),
-                        child: Center(child: Text('No se encontraron canciones.', style: TextStyle(color: Colors.white70))),
+                        child: Center(
+                            child: Text('No se encontraron canciones.',
+                                style: TextStyle(color: Colors.white70))),
                       ),
                     )
                   : SliverList(
@@ -890,13 +1002,21 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
                             leading: song.albumArtUrl.isNotEmpty
                                 ? ClipRRect(
                                     borderRadius: BorderRadius.circular(6),
-                                    child: Image.network(song.albumArtUrl, width: 40, height: 40, fit: BoxFit.cover),
+                                    child: Image.network(song.albumArtUrl,
+                                        width: 40,
+                                        height: 40,
+                                        fit: BoxFit.cover),
                                   )
-                                : const Icon(Icons.music_note, color: Colors.white70),
-                            title: Text(song.title, style: const TextStyle(color: Colors.white)),
-                            subtitle: Text(song.artist, style: const TextStyle(color: Colors.white70)),
+                                : const Icon(Icons.music_note,
+                                    color: Colors.white70),
+                            title: Text(song.title,
+                                style: const TextStyle(color: Colors.white)),
+                            subtitle: Text(song.artist,
+                                style: const TextStyle(color: Colors.white70)),
                             onTap: () async {
-                              final player = Provider.of<PlayerProvider>(context, listen: false);
+                              final player = Provider.of<PlayerProvider>(
+                                  context,
+                                  listen: false);
                               await player.playSongFromList([song], 0);
                             },
                           );
@@ -917,7 +1037,7 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
               future: widget.getUserPlaylistsFuture(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return SizedBox(
+                  return const SizedBox(
                     height: 180,
                     child: Center(child: CircularProgressIndicator()),
                   );
@@ -926,14 +1046,17 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
                   return SizedBox(
                     height: 180,
                     child: Center(
-                      child: Text('Error: \n${snapshot.error}', style: TextStyle(color: Colors.red[200])),
+                      child: Text('Error: \n${snapshot.error}',
+                          style: TextStyle(color: Colors.red[200])),
                     ),
                   );
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return SizedBox(
+                  return const SizedBox(
                     height: 180,
-                    child: Center(child: Text('Sin playlists', style: TextStyle(color: Colors.white70))),
+                    child: Center(
+                        child: Text('Sin playlists',
+                            style: TextStyle(color: Colors.white70))),
                   );
                 }
                 final playlists = snapshot.data!;
@@ -943,7 +1066,7 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: playlists.length,
-                    separatorBuilder: (_, __) => SizedBox(width: 16),
+                    separatorBuilder: (_, __) => const SizedBox(width: 16),
                     itemBuilder: (context, index) {
                       final playlist = playlists[index];
                       return widget.buildPlaylistCard(playlist);
@@ -953,7 +1076,7 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
               },
             ),
           ),
-          SliverToBoxAdapter(child: SizedBox(height: 100)),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ],
     );

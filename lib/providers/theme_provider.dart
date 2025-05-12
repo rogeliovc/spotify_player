@@ -34,8 +34,8 @@ class ThemeProvider extends ChangeNotifier {
     ),
     iconTheme: const IconThemeData(color: Color(0xFFe0c36a)),
     switchTheme: SwitchThemeData(
-      thumbColor: MaterialStateProperty.all(const Color(0xFFe0c36a)),
-      trackColor: MaterialStateProperty.all(const Color(0xFFe0c36a).withOpacity(0.5)),
+      thumbColor: WidgetStateProperty.all(const Color(0xFFe0c36a)),
+      trackColor: WidgetStateProperty.all(const Color(0xFFe0c36a).withOpacity(0.5)),
     ),
     listTileTheme: const ListTileThemeData(
       iconColor: Color(0xFFe0c36a),
@@ -65,8 +65,8 @@ class ThemeProvider extends ChangeNotifier {
     ),
     iconTheme: const IconThemeData(color: Color(0xFFe0c36a)),
     switchTheme: SwitchThemeData(
-      thumbColor: MaterialStateProperty.all(const Color(0xFFe0c36a)),
-      trackColor: MaterialStateProperty.all(const Color(0xFFe0c36a).withOpacity(0.5)),
+      thumbColor: WidgetStateProperty.all(const Color(0xFFe0c36a)),
+      trackColor: WidgetStateProperty.all(const Color(0xFFe0c36a).withOpacity(0.5)),
     ),
     listTileTheme: const ListTileThemeData(
       iconColor: Color(0xFFe0c36a),

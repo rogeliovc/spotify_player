@@ -7,6 +7,8 @@ import '../utils/spotify_search.dart';
 import '../widgets/spotify_search_field.dart';
 
 class MiniPlayer extends StatefulWidget {
+  const MiniPlayer({super.key});
+
   @override
   State<MiniPlayer> createState() => _MiniPlayerState();
 }
@@ -251,11 +253,11 @@ class _ExpandedPlayer extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 0),
+                      const Padding(
+                        padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 0),
                         child: Row(
                           children: [
-                            const Text('Lista de reproducción',
+                            Text('Lista de reproducción',
                                 style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                           ],
                         ),
@@ -271,8 +273,7 @@ class _ExpandedPlayer extends StatelessWidget {
                             shrinkWrap: true,
                             itemCount: player.playlist.length,
                             itemBuilder: (ctx, idx) {
-                              final song = player.playlist[idx];
-                              if (song == null) return const SizedBox.shrink(); // Manejo de canción nula
+                              final song = player.playlist[idx]; // Manejo de canción nula
                               
                               return ListTile(
                                 leading: song.albumArtUrl.isNotEmpty

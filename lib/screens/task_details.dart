@@ -46,9 +46,9 @@ class TaskDetailsScreen extends StatelessWidget {
               style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Preferencias musicales:',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -155,7 +155,7 @@ class TaskDetailsScreen extends StatelessWidget {
       ),
       child: Text(
         genre,
-        style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
+        style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
       ),
     );
   }
