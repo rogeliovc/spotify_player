@@ -22,6 +22,8 @@ class MainPlayerScreen extends StatefulWidget {
 }
 
 class _MainPlayerScreenState extends State<MainPlayerScreen> {
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
   int _selectedTab = 1; // 0: Player, 1: Home, 2: Tasks
 
   Future<List<SpotifyDevice>> getSpotifyDevices(BuildContext context) async {
@@ -982,70 +984,15 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
   }
 
   Widget _buildPlayerContent() {
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: SpotifySearchField(
-              controller: TextEditingController(),
-              onChanged: (_) {},
-              hintText: 'Buscar en Spotify...',
-              showClear: false,
-              onClear: () {},
-            ),
-          ),
-        ),
-        _buildSectionTitle('Tus playlists'),
-        SliverToBoxAdapter(
-          child: FutureBuilder<List<SpotifyTrack>>(
-            future: _getUserPlaylistsFuture(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return SizedBox(
-                  height: 180,
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snapshot.hasError) {
-                return SizedBox(
-                  height: 180,
-                  child: Center(
-                    child: Text('Error: \n${snapshot.error}', style: TextStyle(color: Colors.red[200])),
-                  ),
-                );
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return SizedBox(
-                  height: 180,
-                  child: Center(child: Text('Sin playlists', style: TextStyle(color: Colors.white70))),
-                );
-              }
-              final playlists = snapshot.data!;
-              return SizedBox(
-                height: 180,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: playlists.length,
-                  separatorBuilder: (_, __) => SizedBox(width: 16),
-                  itemBuilder: (context, index) {
-                    final playlist = playlists[index];
-                    return _buildPlaylistCard(playlist);
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-        _buildSectionTitle('Tus favoritas'),
-        _buildHorizontalTrackList(_getFavoriteTracksFuture()),
-        _buildSectionTitle('Reproducidas recientemente'),
-        _buildHorizontalTrackList(_getRecentlyPlayedFuture()),
-        _buildSectionTitle('Nuevos lanzamientos'),
-        _buildHorizontalTrackList(_getNewReleasesFuture()),
-        SliverToBoxAdapter(child: SizedBox(height: 100)),
-      ],
+    return _SpotifyGlobalSearchPlayerContent(
+      buildSectionTitle: _buildSectionTitle,
+      buildHorizontalTrackList: _buildHorizontalTrackList,
+      buildTrackCard: _buildTrackCard,
+      getFavoriteTracksFuture: _getFavoriteTracksFuture,
+      getRecentlyPlayedFuture: _getRecentlyPlayedFuture,
+      getNewReleasesFuture: _getNewReleasesFuture,
+      getUserPlaylistsFuture: _getUserPlaylistsFuture,
+      buildPlaylistCard: _buildPlaylistCard,
     );
   }
 }
@@ -1175,16 +1122,16 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
                       ),
                     )
         else ...[
-          _buildSectionTitle('Tus favoritas'),
-          _buildHorizontalTrackList(_getFavoriteTracksFuture()),
-          _buildSectionTitle('Reproducidas recientemente'),
-          _buildHorizontalTrackList(_getRecentlyPlayedFuture()),
-          _buildSectionTitle('Nuevos lanzamientos'),
-          _buildHorizontalTrackList(_getNewReleasesFuture()),
-          _buildSectionTitle('Tus playlists'),
+          widget.buildSectionTitle('Tus favoritas'),
+          widget.buildHorizontalTrackList(widget.getFavoriteTracksFuture()),
+          widget.buildSectionTitle('Reproducidas recientemente'),
+          widget.buildHorizontalTrackList(widget.getRecentlyPlayedFuture()),
+          widget.buildSectionTitle('Nuevos lanzamientos'),
+          widget.buildHorizontalTrackList(widget.getNewReleasesFuture()),
+          widget.buildSectionTitle('Tus playlists'),
           SliverToBoxAdapter(
             child: FutureBuilder<List<SpotifyTrack>>(
-              future: _getUserPlaylistsFuture(),
+              future: widget.getUserPlaylistsFuture(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const SizedBox(
@@ -1219,7 +1166,7 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
                     separatorBuilder: (_, __) => const SizedBox(width: 16),
                     itemBuilder: (context, index) {
                       final playlist = playlists[index];
-                      return _buildPlaylistCard(playlist);
+                      return widget.buildPlaylistCard(playlist);
                     },
                   ),
                 );
