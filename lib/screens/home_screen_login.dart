@@ -153,16 +153,6 @@ class _HomeScreenLoginState extends State<HomeScreenLogin> {
                     ),
                   ),
                 const SizedBox(height: 16),
-                TextButton(
-                  onPressed: _exchangeToken,
-                  child: const Text(
-                    'Intercambiar token manualmente',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
                 
                 // Mensaje de error
                 if (_error != null) ...[
