@@ -42,6 +42,7 @@ class _MiniPlayerState extends State<MiniPlayer> {
       _updateDominantColor();
     }
   }
+
   @override
   void dispose() {
     _playerProvider?.removeListener(_listener ?? () {});
@@ -58,7 +59,8 @@ class _MiniPlayerState extends State<MiniPlayer> {
         size: const Size(200, 200),
       );
       setState(() {
-        _dominantColor = palette.dominantColor?.color ?? const Color(0xFF151C2C);
+        _dominantColor =
+            palette.dominantColor?.color ?? const Color(0xFF151C2C);
       });
     } catch (_) {
       setState(() {
@@ -77,7 +79,8 @@ class _MiniPlayerState extends State<MiniPlayer> {
         minChildSize: 0.45,
         maxChildSize: 0.85,
         expand: false,
-        builder: (context, scrollController) => _ExpandedPlayer(scrollController: scrollController),
+        builder: (context, scrollController) =>
+            _ExpandedPlayer(scrollController: scrollController),
       ),
     );
   }
@@ -100,7 +103,6 @@ class _MiniPlayerState extends State<MiniPlayer> {
   }
 }
 
-
 class _MiniPlayerWidget extends StatelessWidget {
   final Color? dominantColor;
 
@@ -119,7 +121,10 @@ class _MiniPlayerWidget extends StatelessWidget {
             color: (dominantColor ?? const Color(0xFF151C2C)).withOpacity(0.90),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 2)),
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2)),
             ],
           ),
           width: double.infinity,
@@ -128,7 +133,8 @@ class _MiniPlayerWidget extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(song.albumArtUrl, width: 48, height: 48, fit: BoxFit.cover),
+                child: Image.network(song.albumArtUrl,
+                    width: 48, height: 48, fit: BoxFit.cover),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -136,14 +142,24 @@ class _MiniPlayerWidget extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text(song.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(song.artist,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 13)),
                   ],
                 ),
               ),
               IconButton(
                 icon: Icon(
-                  player.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                  player.isPlaying
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_filled,
                   color: Colors.white,
                   size: 36,
                 ),
@@ -151,14 +167,16 @@ class _MiniPlayerWidget extends StatelessWidget {
                   if (player.isPlaying) {
                     await player.pause();
                   } else {
-                    if (player.currentSong != null && player.currentSong!.positionMs > 0) {
+                    if (player.currentSong != null &&
+                        player.currentSong!.positionMs > 0) {
                       await player.resume(onError: (msg) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(msg)),
                         );
                       });
                     } else {
-                      await player.playSongFromList(player.playlist, player.currentIndex, onError: (msg) {
+                      await player.playSongFromList(
+                          player.playlist, player.currentIndex, onError: (msg) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(msg)),
                         );
@@ -168,7 +186,8 @@ class _MiniPlayerWidget extends StatelessWidget {
                 },
               ),
               IconButton(
-                icon: const Icon(Icons.skip_next, color: Colors.white, size: 28),
+                icon:
+                    const Icon(Icons.skip_next, color: Colors.white, size: 28),
                 onPressed: () async {
                   await player.next();
                 },
@@ -197,7 +216,8 @@ class _PlaylistSearchState extends InheritedWidget {
   }
 
   static _PlaylistSearchState of(BuildContext context) {
-    final _PlaylistSearchState? result = context.dependOnInheritedWidgetOfExactType<_PlaylistSearchState>();
+    final _PlaylistSearchState? result =
+        context.dependOnInheritedWidgetOfExactType<_PlaylistSearchState>();
     assert(result != null, 'No _PlaylistSearchState found in context');
     return result!;
   }
@@ -232,18 +252,26 @@ class _ExpandedPlayer extends StatelessWidget {
 
                 Future<void> doSearch(String query) async {
                   if (query.isEmpty) {
-                    state.set(isSearching: false, searchResults: [], lastQuery: '');
+                    state.set(
+                        isSearching: false, searchResults: [], lastQuery: '');
                     setState(() {});
                     return;
                   }
                   state.set(isSearching: true);
                   setState(() {});
                   try {
-                    final results = await SpotifySearchService.searchTracks(query);
-                    state.set(searchResults: results, isSearching: false, lastQuery: query);
+                    final results =
+                        await SpotifySearchService.searchTracks(query);
+                    state.set(
+                        searchResults: results,
+                        isSearching: false,
+                        lastQuery: query);
                     setState(() {});
                   } catch (_) {
-                    state.set(searchResults: [], isSearching: false, lastQuery: query);
+                    state.set(
+                        searchResults: [],
+                        isSearching: false,
+                        lastQuery: query);
                     setState(() {});
                   }
                 }
@@ -254,18 +282,23 @@ class _ExpandedPlayer extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Padding(
-                        padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 0),
+                        padding: EdgeInsets.only(
+                            top: 16, left: 16, right: 16, bottom: 0),
                         child: Row(
                           children: [
                             Text('Lista de reproducción',
-                                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold)),
                           ],
                         ),
                       ),
                       if (player.playlist.isEmpty)
                         const Padding(
                           padding: EdgeInsets.all(24),
-                          child: Text('No hay canciones en la lista.', style: TextStyle(color: Colors.white70)),
+                          child: Text('No hay canciones en la lista.',
+                              style: TextStyle(color: Colors.white70)),
                         )
                       else
                         Flexible(
@@ -273,9 +306,9 @@ class _ExpandedPlayer extends StatelessWidget {
                             shrinkWrap: true,
                             itemCount: player.playlist.length,
                             itemBuilder: (ctx, idx) {
-                              final song = player.playlist[idx];
-                              if (song == null) return const SizedBox.shrink(); // Manejo de canción nula
-                              
+                              final song = player
+                                  .playlist[idx]; // Manejo de canción nula
+
                               return ListTile(
                                 leading: song.albumArtUrl.isNotEmpty
                                     ? ClipRRect(
@@ -285,37 +318,53 @@ class _ExpandedPlayer extends StatelessWidget {
                                           width: 40,
                                           height: 40,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Container(
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  Container(
                                             width: 40,
                                             height: 40,
                                             color: Colors.grey[900],
-                                            child: const Icon(Icons.music_note, color: Colors.white70),
+                                            child: const Icon(Icons.music_note,
+                                                color: Colors.white70),
                                           ),
                                         ),
                                       )
-                                    : const Icon(Icons.music_note, color: Colors.white70),
+                                    : const Icon(Icons.music_note,
+                                        color: Colors.white70),
                                 title: Text(
-                                  song.title.isNotEmpty ? song.title : 'Título desconocido',
+                                  song.title.isNotEmpty
+                                      ? song.title
+                                      : 'Título desconocido',
                                   style: TextStyle(
-                                    color: idx == player.currentIndex ? const Color(0xFFe0c36a) : Colors.white,
-                                    fontWeight: idx == player.currentIndex ? FontWeight.bold : FontWeight.normal,
+                                    color: idx == player.currentIndex
+                                        ? const Color(0xFFe0c36a)
+                                        : Colors.white,
+                                    fontWeight: idx == player.currentIndex
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
                                   ),
                                 ),
                                 subtitle: Text(
-                                  song.artist.isNotEmpty ? song.artist : 'Artista desconocido',
+                                  song.artist.isNotEmpty
+                                      ? song.artist
+                                      : 'Artista desconocido',
                                   style: const TextStyle(color: Colors.white70),
                                 ),
                                 trailing: idx == player.currentIndex
-                                    ? const Icon(Icons.play_circle_filled, color: Color(0xFFe0c36a))
+                                    ? const Icon(Icons.play_circle_filled,
+                                        color: Color(0xFFe0c36a))
                                     : null,
                                 selected: idx == player.currentIndex,
                                 onTap: () async {
                                   try {
                                     Navigator.of(context).pop();
-                                    await player.playSongFromList(player.playlist, idx);
+                                    await player.playSongFromList(
+                                        player.playlist, idx);
                                   } catch (e) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error al reproducir la canción: $e')),
+                                      SnackBar(
+                                          content: Text(
+                                              'Error al reproducir la canción: $e')),
                                     );
                                   }
                                 },
@@ -370,8 +419,14 @@ class _ExpandedPlayer extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text(song.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
-                  Text(song.artist, style: const TextStyle(color: Colors.white70, fontSize: 17)),
+                  Text(song.title,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22)),
+                  Text(song.artist,
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 17)),
                   const SizedBox(height: 18),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -379,20 +434,27 @@ class _ExpandedPlayer extends StatelessWidget {
                       IconButton(
                         icon: Icon(
                           Icons.repeat,
-                          color: player.repeatSong ? const Color(0xFFe0c36a) : Colors.white,
+                          color: player.repeatSong
+                              ? const Color(0xFFe0c36a)
+                              : Colors.white,
                           size: 28,
                         ),
-                        tooltip: player.repeatSong ? 'Repetir (activo)' : 'Repetir',
+                        tooltip:
+                            player.repeatSong ? 'Repetir (activo)' : 'Repetir',
                         onPressed: () {
                           player.repeatSong = !player.repeatSong;
                           player.notifyListeners();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(player.repeatSong ? 'Repetir activado' : 'Repetir desactivado')),
+                            SnackBar(
+                                content: Text(player.repeatSong
+                                    ? 'Repetir activado'
+                                    : 'Repetir desactivado')),
                           );
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.skip_previous, color: Colors.white, size: 36),
+                        icon: const Icon(Icons.skip_previous,
+                            color: Colors.white, size: 36),
                         onPressed: () async {
                           await player.previous(onError: (msg) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -403,7 +465,9 @@ class _ExpandedPlayer extends StatelessWidget {
                       ),
                       IconButton(
                         icon: Icon(
-                          player.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                          player.isPlaying
+                              ? Icons.pause_circle_filled
+                              : Icons.play_circle_filled,
                           color: Colors.white,
                           size: 56,
                         ),
@@ -411,14 +475,17 @@ class _ExpandedPlayer extends StatelessWidget {
                           if (player.isPlaying) {
                             await player.pause();
                           } else {
-                            if (player.currentSong != null && player.currentSong!.positionMs > 0) {
+                            if (player.currentSong != null &&
+                                player.currentSong!.positionMs > 0) {
                               await player.resume(onError: (msg) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text(msg)),
                                 );
                               });
                             } else {
-                              await player.playSongFromList(player.playlist, player.currentIndex, onError: (msg) {
+                              await player.playSongFromList(
+                                  player.playlist, player.currentIndex,
+                                  onError: (msg) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text(msg)),
                                 );
@@ -428,13 +495,15 @@ class _ExpandedPlayer extends StatelessWidget {
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.skip_next, color: Colors.white, size: 36),
+                        icon: const Icon(Icons.skip_next,
+                            color: Colors.white, size: 36),
                         onPressed: () async {
                           await player.next();
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.queue_music, color: Colors.white, size: 28),
+                        icon: const Icon(Icons.queue_music,
+                            color: Colors.white, size: 28),
                         tooltip: 'Ver lista de reproducción',
                         onPressed: () {
                           _showPlaylist(context, player);
@@ -465,13 +534,20 @@ class _ExpandedPlayer extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(_formatDuration(Duration(milliseconds: song.positionMs)), style: const TextStyle(color: Colors.white70)),
-                      Text(_formatDuration(Duration(milliseconds: song.durationMs)), style: const TextStyle(color: Colors.white70)),
+                      Text(
+                          _formatDuration(
+                              Duration(milliseconds: song.positionMs)),
+                          style: const TextStyle(color: Colors.white70)),
+                      Text(
+                          _formatDuration(
+                              Duration(milliseconds: song.durationMs)),
+                          style: const TextStyle(color: Colors.white70)),
                     ],
                   ),
                   const SizedBox(height: 24),
                   IconButton(
-                    icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 32),
+                    icon: const Icon(Icons.keyboard_arrow_down,
+                        color: Colors.white, size: 32),
                     onPressed: () {
                       Navigator.of(context).pop();
                     },

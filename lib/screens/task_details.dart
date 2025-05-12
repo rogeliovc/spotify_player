@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../models/task_model.dart';
 import '../services/music_recommender.dart';
 
@@ -15,7 +14,8 @@ class TaskDetailsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Detalles de Tarea', style: TextStyle(fontFamily: 'Serif', color: Colors.white)),
+        title: const Text('Detalles de Tarea',
+            style: TextStyle(fontFamily: 'Serif', color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
@@ -25,7 +25,10 @@ class TaskDetailsScreen extends StatelessWidget {
           children: [
             Text(
               task.title,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20),
             ),
             const SizedBox(height: 8),
             Text(
@@ -48,7 +51,8 @@ class TaskDetailsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             const Text(
               'Preferencias musicales:',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -64,7 +68,8 @@ class TaskDetailsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'Estado de ánimo: ${(task.valence * 100).round()}%',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -72,7 +77,8 @@ class TaskDetailsScreen extends StatelessWidget {
                 final recommendations = MusicRecommender().recommendMusic(task);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Recomendaciones: ${recommendations.join(', ')}'),
+                    content:
+                        Text('Recomendaciones: ${recommendations.join(', ')}'),
                     backgroundColor: Colors.blue,
                   ),
                 );
@@ -83,7 +89,8 @@ class TaskDetailsScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text('Ver Recomendaciones', style: TextStyle(color: Colors.white)),
+              child: const Text('Ver Recomendaciones',
+                  style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -125,7 +132,8 @@ class TaskDetailsScreen extends StatelessWidget {
       ),
       child: Text(
         taskType,
-        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
+        style:
+            TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
       ),
     );
   }
@@ -140,7 +148,8 @@ class TaskDetailsScreen extends StatelessWidget {
       ),
       child: Text(
         'Energía: ${(energyLevel * 100).round()}%',
-        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+        style: const TextStyle(
+            color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
       ),
     );
   }
@@ -155,7 +164,8 @@ class TaskDetailsScreen extends StatelessWidget {
       ),
       child: Text(
         genre,
-        style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
+        style: const TextStyle(
+            color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
       ),
     );
   }

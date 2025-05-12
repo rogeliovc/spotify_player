@@ -8,10 +8,13 @@ class SpotifySearchService {
   static Future<List<Song>> searchTracks(String query, {int limit = 15}) async {
     final auth = AuthService();
     final token = await auth.getAccessToken();
-    print('[SpotifySearch] token: ${token != null ? token.substring(0, 10) + '...' : 'NULL'}');
-    if (token == null) throw Exception('No se encontró el token de sesión de Spotify.');
+    print(
+        '[SpotifySearch] token: ${token != null ? '${token.substring(0, 10)}...' : 'NULL'}');
+    if (token == null)
+      throw Exception('No se encontró el token de sesión de Spotify.');
 
-    final url = Uri.parse('https://api.spotify.com/v1/search?q=${Uri.encodeComponent(query)}&type=track&limit=$limit');
+    final url = Uri.parse(
+        'https://api.spotify.com/v1/search?q=${Uri.encodeComponent(query)}&type=track&limit=$limit');
     print('[SpotifySearch] Buscando: $query');
     final response = await http.get(
       url,

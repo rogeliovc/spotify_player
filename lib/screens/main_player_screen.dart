@@ -186,74 +186,74 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
       ),
       body: Stack(
         children: [
+          // Contenido principal con tabs
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF182B45),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.music_note,
-                                  color: _selectedTab == 0
-                                      ? Colors.white
-                                      : Colors.white.withOpacity(0.6)),
-                              onPressed: () => setState(() => _selectedTab = 0),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: _selectedTab == 1
-                                    ? Colors.white
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 18, vertical: 4),
-                              child: IconButton(
-                                icon: Icon(Icons.home,
-                                    color: _selectedTab == 1
-                                        ? const Color(0xFF182B45)
-                                        : Colors.white.withOpacity(0.6)),
-                                onPressed: () => setState(() => _selectedTab = 1),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: Icon(Icons.calendar_today,
-                                  color: _selectedTab == 2
-                                      ? Colors.white
-                                      : Colors.white.withOpacity(0.6)),
-                              onPressed: () => setState(() => _selectedTab = 2),
-                            ),
-                          ],
-                        ),
-                      ),
+            child: Column(
+              children: [
+                Center(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF182B45),
+                      borderRadius: BorderRadius.circular(30),
                     ),
-                    const SizedBox(height: 20),
-                    _selectedTab == 1
-                        ? _buildCalendarOnly()
-                        : _selectedTab == 2
-                            ? _buildTaskManager()
-                            : _buildPlayerContent(),
-                  ],
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.music_note,
+                              color: _selectedTab == 0
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.6)),
+                          onPressed: () => setState(() => _selectedTab = 0),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: _selectedTab == 1
+                                ? Colors.white
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 18, vertical: 4),
+                          child: IconButton(
+                            icon: Icon(Icons.home,
+                                color: _selectedTab == 1
+                                    ? const Color(0xFF182B45)
+                                    : Colors.white.withOpacity(0.6)),
+                            onPressed: () => setState(() => _selectedTab = 1),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(Icons.calendar_today,
+                              color: _selectedTab == 2
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.6)),
+                          onPressed: () => setState(() => _selectedTab = 2),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 20),
+                Expanded(
+                  child: _selectedTab == 1
+                      ? _buildCalendarOnly()
+                      : _selectedTab == 2
+                          ? _buildTaskManager()
+                          : _buildPlayerContent(),
+                ),
+              ],
             ),
           ),
-          // MiniPlayer siempre visible
-          MiniPlayer(),
+          // MiniPlayer siempre visible, pegado al fondo
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: MiniPlayer(),
+          ),
         ],
       ),
     );
@@ -263,7 +263,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          padding: const EdgeInsets.symmetric(vertical: 4.0),
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -282,11 +282,13 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                 final Map<DateTime, List<dynamic>> taskEvents = {};
                 for (final task in taskProvider.tasks) {
                   if (!task.completed) {
-                    final day = DateTime(task.dueDate.year, task.dueDate.month, task.dueDate.day);
+                    final day = DateTime(task.dueDate.year, task.dueDate.month,
+                        task.dueDate.day);
                     taskEvents.putIfAbsent(day, () => []).add(task);
                   }
                 }
                 return TableCalendar(
+                    rowHeight: 54,
                   firstDay: DateTime.utc(2020, 1, 1),
                   lastDay: DateTime.utc(2030, 12, 31),
                   focusedDay: _focusedDay,
@@ -310,12 +312,14 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                       color: Colors.blue.shade100,
                       shape: BoxShape.circle,
                     ),
-                    todayTextStyle: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                    todayTextStyle: const TextStyle(
+                        color: Colors.blue, fontWeight: FontWeight.bold),
                     selectedDecoration: BoxDecoration(
                       color: Colors.blue,
                       shape: BoxShape.circle,
                     ),
-                    selectedTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    selectedTextStyle: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
                     disabledTextStyle: const TextStyle(color: Colors.grey),
                     markerDecoration: BoxDecoration(
                       color: Colors.blueAccent,
@@ -355,12 +359,16 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
                     ),
-                    leftChevronIcon: Icon(Icons.chevron_left, color: Colors.black87),
-                    rightChevronIcon: Icon(Icons.chevron_right, color: Colors.black87),
+                    leftChevronIcon:
+                        Icon(Icons.chevron_left, color: Colors.black87),
+                    rightChevronIcon:
+                        Icon(Icons.chevron_right, color: Colors.black87),
                   ),
                   daysOfWeekStyle: const DaysOfWeekStyle(
-                    weekdayStyle: TextStyle(color: Colors.black54, fontWeight: FontWeight.w600),
-                    weekendStyle: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w600),
+                    weekdayStyle: TextStyle(
+                        color: Colors.black54, fontWeight: FontWeight.w600),
+                    weekendStyle: TextStyle(
+                        color: Colors.blueGrey, fontWeight: FontWeight.w600),
                   ),
                 );
               },
@@ -385,17 +393,17 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
               );
             }
             return SizedBox(
-              height: 140,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                height: 130,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 itemCount: pendingTasks.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 18),
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (context, index) {
                   final task = pendingTasks[index];
                   return Container(
-                    width: 240,
-                    padding: const EdgeInsets.all(16),
+                    width: 180,
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: const Color(0xFF182B45),
                       borderRadius: BorderRadius.circular(18),
@@ -451,7 +459,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
             );
           },
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 16),
         // Carrusel de escuchados recientemente
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -467,11 +475,13 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
             ),
           ),
         ),
-        _buildHorizontalTrackList(_getRecentlyPlayedFuture()),
+        SizedBox(
+          height: 110,
+          child: _buildHorizontalTrackList(_getRecentlyPlayedFuture()),
+        ),
       ],
     );
   }
-
 
   Widget _buildSectionTitle(String title) {
     return Padding(
@@ -484,8 +494,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
     );
   }
 
-  Widget _buildHorizontalTrackList(
-      Future<List<SpotifyTrack>> futureTracks) {
+  Widget _buildHorizontalTrackList(Future<List<SpotifyTrack>> futureTracks) {
     return FutureBuilder<List<SpotifyTrack>>(
       future: futureTracks,
       builder: (context, snapshot) {
@@ -512,8 +521,12 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                       style: TextStyle(color: Colors.white70))));
         }
         final tracks = snapshot.data!;
-        return SizedBox(
+        return Container(
           height: 180,
+          decoration: BoxDecoration(
+            color: const Color(0xFF182B45),
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -548,6 +561,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         width: 140,
         margin: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
+          color: const Color(0xFF182B45), // Agregado
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -1033,10 +1047,12 @@ class _SpotifyGlobalSearchPlayerContent extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<_SpotifyGlobalSearchPlayerContent> createState() => _SpotifyGlobalSearchPlayerContentState();
+  State<_SpotifyGlobalSearchPlayerContent> createState() =>
+      _SpotifyGlobalSearchPlayerContentState();
 }
 
-class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchPlayerContent> {
+class _SpotifyGlobalSearchPlayerContentState
+    extends State<_SpotifyGlobalSearchPlayerContent> {
   final TextEditingController _searchController = TextEditingController();
   List<Song> _searchResults = [];
   bool _isSearching = false;
@@ -1051,7 +1067,9 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
       });
       return;
     }
-    setState(() { _isSearching = true; });
+    setState(() {
+      _isSearching = true;
+    });
     try {
       final results = await SpotifySearchService.searchTracks(query);
       setState(() {
@@ -1087,7 +1105,7 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
             ),
           ),
         ),
-        if (_searchController.text.isNotEmpty)
+        if (_searchController.text.isNotEmpty) ...[
           _isSearching
               ? const SliverToBoxAdapter(
                   child: Padding(
@@ -1134,22 +1152,32 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
                         childCount: _searchResults.length,
                       ),
                     )
-        else ...[
-          widget.buildSectionTitle('Tus favoritas'),
-          widget.buildHorizontalTrackList(widget.getFavoriteTracksFuture()),
-          widget.buildSectionTitle('Reproducidas recientemente'),
-          widget.buildHorizontalTrackList(widget.getRecentlyPlayedFuture()),
-          widget.buildSectionTitle('Nuevos lanzamientos'),
-          widget.buildHorizontalTrackList(widget.getNewReleasesFuture()),
-          widget.buildSectionTitle('Tus playlists'),
+        ] else ...[
+          SliverToBoxAdapter(child: widget.buildSectionTitle('Tus favoritas')),
+          SliverToBoxAdapter(
+              child: widget
+                  .buildHorizontalTrackList(widget.getFavoriteTracksFuture())),
+          SliverToBoxAdapter(
+              child: widget.buildSectionTitle('Reproducidas recientemente')),
+          SliverToBoxAdapter(
+              child: widget
+                  .buildHorizontalTrackList(widget.getRecentlyPlayedFuture())),
+          SliverToBoxAdapter(
+              child: widget.buildSectionTitle('Nuevos lanzamientos')),
+          SliverToBoxAdapter(
+              child: widget
+                  .buildHorizontalTrackList(widget.getNewReleasesFuture())),
+          SliverToBoxAdapter(child: widget.buildSectionTitle('Tus playlists')),
           SliverToBoxAdapter(
             child: FutureBuilder<List<SpotifyTrack>>(
               future: widget.getUserPlaylistsFuture(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SizedBox(
-                    height: 180,
-                    child: Center(child: CircularProgressIndicator()),
+                  return SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: 180,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
                   );
                 }
                 if (snapshot.hasError) {
@@ -1192,4 +1220,3 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
     );
   }
 }
-
