@@ -23,6 +23,37 @@ class MainPlayerScreen extends StatefulWidget {
 class _MainPlayerScreenState extends State<MainPlayerScreen> {
   int _selectedTab = 1; // 0: Player, 1: Home, 2: Tasks
 
+  final TextEditingController _searchController = TextEditingController();
+  List<Song> _searchResults = [];
+  bool _isSearching = false;
+  String _lastQuery = '';
+
+  void _onSearchChanged(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+        _lastQuery = '';
+      });
+      return;
+    }
+    setState(() { _isSearching = true; });
+    try {
+      final results = await SpotifySearchService.searchTracks(query);
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+        _lastQuery = query;
+      });
+    } catch (_) {
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+        _lastQuery = query;
+      });
+    }
+  }
+
   Future<List<SpotifyDevice>> getSpotifyDevices(BuildContext context) async {
     final auth = AuthService();
     final token = await auth.getAccessToken();
@@ -728,134 +759,6 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
             child: SpotifySearchField(
-              controller: TextEditingController(),
-              onChanged: (_) {},
-              hintText: 'Buscar en Spotify...',
-              showClear: false,
-              onClear: () {},
-            ),
-          ),
-        ),
-        _buildSectionTitle('Tus playlists'),
-        SliverToBoxAdapter(
-          child: FutureBuilder<List<SpotifyTrack>>(
-            future: _getUserPlaylistsFuture(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return SizedBox(
-                  height: 180,
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (snapshot.hasError) {
-                return SizedBox(
-                  height: 180,
-                  child: Center(
-                    child: Text('Error: \n${snapshot.error}', style: TextStyle(color: Colors.red[200])),
-                  ),
-                );
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return SizedBox(
-                  height: 180,
-                  child: Center(child: Text('Sin playlists', style: TextStyle(color: Colors.white70))),
-                );
-              }
-              final playlists = snapshot.data!;
-              return SizedBox(
-                height: 180,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: playlists.length,
-                  separatorBuilder: (_, __) => SizedBox(width: 16),
-                  itemBuilder: (context, index) {
-                    final playlist = playlists[index];
-                    return _buildPlaylistCard(playlist);
-                  },
-                ),
-              );
-            },
-          ),
-        ),
-        _buildSectionTitle('Tus favoritas'),
-        _buildHorizontalTrackList(_getFavoriteTracksFuture()),
-        _buildSectionTitle('Reproducidas recientemente'),
-        _buildHorizontalTrackList(_getRecentlyPlayedFuture()),
-        _buildSectionTitle('Nuevos lanzamientos'),
-        _buildHorizontalTrackList(_getNewReleasesFuture()),
-        SliverToBoxAdapter(child: SizedBox(height: 100)),
-      ],
-    );
-  }
-}
-
-class _SpotifyGlobalSearchPlayerContent extends StatefulWidget {
-  final SliverToBoxAdapter Function(String) buildSectionTitle;
-  final SliverToBoxAdapter Function(Future<List<SpotifyTrack>>) buildHorizontalTrackList;
-  final Widget Function(SpotifyTrack) buildTrackCard;
-  final Future<List<SpotifyTrack>> Function() getFavoriteTracksFuture;
-  final Future<List<SpotifyTrack>> Function() getRecentlyPlayedFuture;
-  final Future<List<SpotifyTrack>> Function() getNewReleasesFuture;
-  final Future<List<SpotifyTrack>> Function() getUserPlaylistsFuture;
-  final Widget Function(SpotifyTrack) buildPlaylistCard;
-
-  const _SpotifyGlobalSearchPlayerContent({
-    required this.buildSectionTitle,
-    required this.buildHorizontalTrackList,
-    required this.buildTrackCard,
-    required this.getFavoriteTracksFuture,
-    required this.getRecentlyPlayedFuture,
-    required this.getNewReleasesFuture,
-    required this.getUserPlaylistsFuture,
-    required this.buildPlaylistCard,
-    Key? key,
-  }) : super(key: key);
-
-  @override
-  State<_SpotifyGlobalSearchPlayerContent> createState() => _SpotifyGlobalSearchPlayerContentState();
-}
-
-class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchPlayerContent> {
-  final TextEditingController _searchController = TextEditingController();
-  List<Song> _searchResults = [];
-  bool _isSearching = false;
-  String _lastQuery = '';
-
-  void _onSearchChanged(String query) async {
-    if (query.isEmpty) {
-      setState(() {
-        _searchResults = [];
-        _isSearching = false;
-        _lastQuery = '';
-      });
-      return;
-    }
-    setState(() { _isSearching = true; });
-    try {
-      final results = await SpotifySearchService.searchTracks(query);
-      setState(() {
-        _searchResults = results;
-        _isSearching = false;
-        _lastQuery = query;
-      });
-    } catch (_) {
-      setState(() {
-        _searchResults = [];
-        _isSearching = false;
-        _lastQuery = query;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: SpotifySearchField(
               controller: _searchController,
               onChanged: _onSearchChanged,
               hintText: 'Buscar en Spotify...',
@@ -905,16 +808,16 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
                       ),
                     )
         else ...[
-          widget.buildSectionTitle('Tus favoritas'),
-          widget.buildHorizontalTrackList(widget.getFavoriteTracksFuture()),
-          widget.buildSectionTitle('Reproducidas recientemente'),
-          widget.buildHorizontalTrackList(widget.getRecentlyPlayedFuture()),
-          widget.buildSectionTitle('Nuevos lanzamientos'),
-          widget.buildHorizontalTrackList(widget.getNewReleasesFuture()),
-          widget.buildSectionTitle('Tus playlists'),
+          _buildSectionTitle('Tus favoritas'),
+          _buildHorizontalTrackList(_getFavoriteTracksFuture()),
+          _buildSectionTitle('Reproducidas recientemente'),
+          _buildHorizontalTrackList(_getRecentlyPlayedFuture()),
+          _buildSectionTitle('Nuevos lanzamientos'),
+          _buildHorizontalTrackList(_getNewReleasesFuture()),
+          _buildSectionTitle('Tus playlists'),
           SliverToBoxAdapter(
             child: FutureBuilder<List<SpotifyTrack>>(
-              future: widget.getUserPlaylistsFuture(),
+              future: _getUserPlaylistsFuture(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return SizedBox(
@@ -946,7 +849,7 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
                     separatorBuilder: (_, __) => SizedBox(width: 16),
                     itemBuilder: (context, index) {
                       final playlist = playlists[index];
-                      return widget.buildPlaylistCard(playlist);
+                      return _buildPlaylistCard(playlist);
                     },
                   ),
                 );
@@ -959,3 +862,4 @@ class _SpotifyGlobalSearchPlayerContentState extends State<_SpotifyGlobalSearchP
     );
   }
 }
+

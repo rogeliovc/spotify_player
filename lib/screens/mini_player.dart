@@ -273,7 +273,6 @@ class _ExpandedPlayer extends StatelessWidget {
                             itemBuilder: (ctx, idx) {
                               final song = player.playlist[idx];
                               if (song == null) return const SizedBox.shrink(); // Manejo de canción nula
-                              
                               return ListTile(
                                 leading: song.albumArtUrl.isNotEmpty
                                     ? ClipRRect(

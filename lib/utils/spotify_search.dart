@@ -8,9 +8,11 @@ class SpotifySearchService {
   static Future<List<Song>> searchTracks(String query, {int limit = 15}) async {
     final auth = AuthService();
     final token = await auth.getAccessToken();
+    print('[SpotifySearch] token: ${token != null ? token.substring(0, 10) + '...' : 'NULL'}');
     if (token == null) throw Exception('No se encontró el token de sesión de Spotify.');
 
     final url = Uri.parse('https://api.spotify.com/v1/search?q=${Uri.encodeComponent(query)}&type=track&limit=$limit');
+    print('[SpotifySearch] Buscando: $query');
     final response = await http.get(
       url,
       headers: {
@@ -18,20 +20,14 @@ class SpotifySearchService {
         'Content-Type': 'application/json',
       },
     );
+    print('[SpotifySearch] Status code: ${response.statusCode}');
     if (response.statusCode != 200) {
+      print('[SpotifySearch] Error body: ${response.body}');
       throw Exception('Error al buscar canciones: ${response.body}');
     }
     final data = json.decode(response.body);
     final items = data['tracks']['items'] as List<dynamic>;
-    return items.map((item) {
-      return Song(
-        id: item['id'],
-        title: item['name'],
-        artist: (item['artists'] as List).isNotEmpty ? item['artists'][0]['name'] : '',
-        album: item['album']?['name'] ?? '',
-        albumArtUrl: (item['album']?['images'] as List).isNotEmpty ? item['album']['images'][0]['url'] : '',
-        durationMs: item['duration_ms'] ?? 0,
-      );
-    }).toList();
+    print('[SpotifySearch] Resultados encontrados: ${items.length}');
+    return items.map<Song>((item) => Song.fromSpotifyApi(item)).toList();
   }
 }
