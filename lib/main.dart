@@ -7,7 +7,6 @@ import 'services/auth_service.dart';
 import 'screens/main_player_screen.dart';
 import 'screens/task_manager.dart';
 import 'screens/home_screen_login.dart';
-import 'models/task_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

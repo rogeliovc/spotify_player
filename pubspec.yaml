@@ -30,6 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  table_calendar: ^3.0.9
   cupertino_icons: ^1.0.2
   flutter_secure_storage: ^9.0.0
   http: ^1.1.0

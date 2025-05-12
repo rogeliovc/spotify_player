@@ -76,7 +76,11 @@ class TaskManagerScreen extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Tareas', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                const Text('Tareas',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 if (taskProvider.tasks.isEmpty)
                   Container(
@@ -112,7 +116,10 @@ class TaskManagerScreen extends StatelessWidget {
                     child: ListTile(
                       title: Text(
                         t.title,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -121,12 +128,14 @@ class TaskManagerScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Hasta: ${_dueDateText(t.dueDate)}',
-                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 13),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             t.description,
-                            style: const TextStyle(color: Colors.white, fontSize: 14),
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -141,27 +150,32 @@ class TaskManagerScreen extends StatelessWidget {
                         ],
                       ),
                       trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        t.completed ? Icons.check_circle : Icons.radio_button_unchecked,
-                        color: t.completed ? Colors.green : Colors.white38,
-                      ),
-                      onPressed: () => taskProvider.toggleTaskCompleted(i),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.info_outline, color: Colors.white70),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => TaskDetailsScreen(task: t),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              t.completed
+                                  ? Icons.check_circle
+                                  : Icons.radio_button_unchecked,
+                              color:
+                                  t.completed ? Colors.green : Colors.white38,
+                            ),
+                            onPressed: () =>
+                                taskProvider.toggleTaskCompleted(i),
                           ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
+                          IconButton(
+                            icon: const Icon(Icons.info_outline,
+                                color: Colors.white70),
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => TaskDetailsScreen(task: t),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }).toList(),
@@ -219,7 +233,9 @@ class TaskManagerScreen extends StatelessWidget {
         border: Border.all(color: color, width: 1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(taskType, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+      child: Text(taskType,
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.bold, fontSize: 13)),
     );
   }
 
@@ -233,7 +249,8 @@ class TaskManagerScreen extends StatelessWidget {
       ),
       child: Text(
         'Energía: ${(energyLevel * 100).round()}%',
-        style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+        style: const TextStyle(
+            color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
       ),
     );
   }
@@ -258,37 +275,37 @@ class _TaskAdderState extends State<TaskAdder> {
   bool _jazz = false;
   bool _rock = false;
   bool _isFormValid = false;
-  double _energyLevel = 0.5;
+  final double _energyLevel = 0.5;
   double _valence = 0.5;
-  int _tempo = 120;
+  final int _tempo = 120;
 
   void _createTask() {
     if (_dueDate == null) return;
-    
+
     context.read<TaskProvider>().addTask(
-      Task(
-        title: _title,
-        description: _description,
-        dueDate: _dueDate!,
-        taskType: _taskType,
-        classical: _classical ? 1.0 : 0.0,
-        lofi: _lofi ? 1.0 : 0.0,
-        electronic: _electronic ? 1.0 : 0.0,
-        jazz: _jazz ? 1.0 : 0.0,
-        rock: _rock ? 1.0 : 0.0,
-        energyLevel: _energyLevel,
-        valence: _valence,
-        tempo: _tempo,
-      ),
-    );
+          Task(
+            title: _title,
+            description: _description,
+            dueDate: _dueDate!,
+            taskType: _taskType,
+            classical: _classical ? 1.0 : 0.0,
+            lofi: _lofi ? 1.0 : 0.0,
+            electronic: _electronic ? 1.0 : 0.0,
+            jazz: _jazz ? 1.0 : 0.0,
+            rock: _rock ? 1.0 : 0.0,
+            energyLevel: _energyLevel,
+            valence: _valence,
+            tempo: _tempo,
+          ),
+        );
     Navigator.pop(context);
   }
 
   void _validateForm() {
     setState(() {
-      _isFormValid = _title.isNotEmpty && _dueDate != null && (
-        _classical || _lofi || _electronic || _jazz || _rock
-      );
+      _isFormValid = _title.isNotEmpty &&
+          _dueDate != null &&
+          (_classical || _lofi || _electronic || _jazz || _rock);
     });
   }
 
@@ -305,7 +322,8 @@ class _TaskAdderState extends State<TaskAdder> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  Widget _buildGenreChip(String genre, bool isSelected, Function(bool) onChanged) {
+  Widget _buildGenreChip(
+      String genre, bool isSelected, Function(bool) onChanged) {
     return ChoiceChip(
       label: Text(
         genre,
@@ -328,7 +346,8 @@ class _TaskAdderState extends State<TaskAdder> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Nueva tarea', style: TextStyle(fontFamily: 'Serif', color: Colors.white)),
+        title: const Text('Nueva tarea',
+            style: TextStyle(fontFamily: 'Serif', color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
@@ -338,13 +357,17 @@ class _TaskAdderState extends State<TaskAdder> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('¿Qué harás?...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              const Text('¿Qué harás?...',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
               TextFormField(
                 decoration: const InputDecoration(
                   hintText: 'Agrega una descripción...',
                   hintStyle: TextStyle(color: Colors.white54),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white38)),
-                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+                  enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white38)),
+                  focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white)),
                 ),
                 style: const TextStyle(color: Colors.white),
                 onChanged: (value) {
@@ -363,15 +386,19 @@ class _TaskAdderState extends State<TaskAdder> {
                 decoration: const InputDecoration(
                   hintText: 'Agrega una descripción...',
                   hintStyle: TextStyle(color: Colors.white54),
-                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white38)),
-                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white)),
+                  enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white38)),
+                  focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white)),
                 ),
                 style: const TextStyle(color: Colors.white),
                 maxLines: 3,
                 onChanged: (value) => _description = value,
               ),
               const SizedBox(height: 16),
-              Text('¿Qué tipo de tarea es?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              const Text('¿Qué tipo de tarea es?',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -425,7 +452,9 @@ class _TaskAdderState extends State<TaskAdder> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('¿Qué tipo de música prefieres?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              const Text('¿Qué tipo de música prefieres?',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -436,36 +465,53 @@ class _TaskAdderState extends State<TaskAdder> {
                 child: Wrap(
                   spacing: 8,
                   children: [
-                    _buildGenreChip('Clásica', _classical, (value) => setState(() {
-                      _classical = value;
-                      _validateForm();
-                    })),
-                    _buildGenreChip('Lo-fi', _lofi, (value) => setState(() {
-                      _lofi = value;
-                      _validateForm();
-                    })),
-                    _buildGenreChip('Electrónica', _electronic, (value) => setState(() {
-                      _electronic = value;
-                      _validateForm();
-                    })),
-                    _buildGenreChip('Jazz', _jazz, (value) => setState(() {
-                      _jazz = value;
-                      _validateForm();
-                    })),
-                    _buildGenreChip('Rock', _rock, (value) => setState(() {
-                      _rock = value;
-                      _validateForm();
-                    })),
+                    _buildGenreChip(
+                        'Clásica',
+                        _classical,
+                        (value) => setState(() {
+                              _classical = value;
+                              _validateForm();
+                            })),
+                    _buildGenreChip(
+                        'Lo-fi',
+                        _lofi,
+                        (value) => setState(() {
+                              _lofi = value;
+                              _validateForm();
+                            })),
+                    _buildGenreChip(
+                        'Electrónica',
+                        _electronic,
+                        (value) => setState(() {
+                              _electronic = value;
+                              _validateForm();
+                            })),
+                    _buildGenreChip(
+                        'Jazz',
+                        _jazz,
+                        (value) => setState(() {
+                              _jazz = value;
+                              _validateForm();
+                            })),
+                    _buildGenreChip(
+                        'Rock',
+                        _rock,
+                        (value) => setState(() {
+                              _rock = value;
+                              _validateForm();
+                            })),
                   ],
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
+              const Text(
                 'Selecciona los géneros musicales que prefieres para tu tarea',
                 style: TextStyle(color: Colors.white70),
               ),
               const SizedBox(height: 16),
-              Text('¿Qué estado de ánimo prefieres?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              const Text('¿Qué estado de ánimo prefieres?',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -490,9 +536,12 @@ class _TaskAdderState extends State<TaskAdder> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Triste', style: TextStyle(color: Colors.white70)),
-                        Text('${(_valence * 100).round()}%', style: const TextStyle(color: Colors.white)),
-                        const Text('Feliz', style: TextStyle(color: Colors.white70)),
+                        const Text('Triste',
+                            style: TextStyle(color: Colors.white70)),
+                        Text('${(_valence * 100).round()}%',
+                            style: const TextStyle(color: Colors.white)),
+                        const Text('Feliz',
+                            style: TextStyle(color: Colors.white70)),
                       ],
                     ),
                   ],
@@ -507,7 +556,8 @@ class _TaskAdderState extends State<TaskAdder> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text('Agregar Tarea', style: TextStyle(color: Colors.white)),
+                child: const Text('Agregar Tarea',
+                    style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
