@@ -189,66 +189,66 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF182B45),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.music_note,
-                                color: _selectedTab == 0
-                                    ? Colors.white
-                                    : Colors.white.withOpacity(0.6)),
-                            onPressed: () => setState(() => _selectedTab = 0),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: _selectedTab == 1
-                                  ? Colors.white
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 18, vertical: 4),
-                            child: IconButton(
-                              icon: Icon(Icons.home,
-                                  color: _selectedTab == 1
-                                      ? const Color(0xFF182B45)
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF182B45),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.music_note,
+                                  color: _selectedTab == 0
+                                      ? Colors.white
                                       : Colors.white.withOpacity(0.6)),
-                              onPressed: () => setState(() => _selectedTab = 1),
+                              onPressed: () => setState(() => _selectedTab = 0),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          IconButton(
-                            icon: Icon(Icons.calendar_today,
-                                color: _selectedTab == 2
+                            const SizedBox(width: 8),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: _selectedTab == 1
                                     ? Colors.white
-                                    : Colors.white.withOpacity(0.6)),
-                            onPressed: () => setState(() => _selectedTab = 2),
-                          ),
-                        ],
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 18, vertical: 4),
+                              child: IconButton(
+                                icon: Icon(Icons.home,
+                                    color: _selectedTab == 1
+                                        ? const Color(0xFF182B45)
+                                        : Colors.white.withOpacity(0.6)),
+                                onPressed: () => setState(() => _selectedTab = 1),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: Icon(Icons.calendar_today,
+                                  color: _selectedTab == 2
+                                      ? Colors.white
+                                      : Colors.white.withOpacity(0.6)),
+                              onPressed: () => setState(() => _selectedTab = 2),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  Expanded(
-                    child: _selectedTab == 1
+                    const SizedBox(height: 20),
+                    _selectedTab == 1
                         ? _buildCalendarOnly()
                         : _selectedTab == 2
                             ? _buildTaskManager()
                             : _buildPlayerContent(),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -427,7 +427,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Hasta: 	${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}',
+                          'Hasta: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 13,
@@ -451,68 +451,81 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
             );
           },
         ),
+        const SizedBox(height: 32),
+        // Carrusel de escuchados recientemente
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Escuchados recientemente',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+        _buildHorizontalTrackList(_getRecentlyPlayedFuture()),
       ],
     );
   }
 
 
-  SliverToBoxAdapter _buildSectionTitle(String title) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Text(
-          title,
-          style: const TextStyle(
-              fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Text(
+        title,
+        style: const TextStyle(
+            fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
       ),
     );
   }
 
-  SliverToBoxAdapter _buildHorizontalTrackList(
+  Widget _buildHorizontalTrackList(
       Future<List<SpotifyTrack>> futureTracks) {
-    return SliverToBoxAdapter(
-      child: FutureBuilder<List<SpotifyTrack>>(
-        future: futureTracks,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const SizedBox(
-              height: 180,
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (snapshot.hasError) {
-            return SizedBox(
-              height: 180,
-              child: Center(
-                child: Text('Error: \\n${snapshot.error}',
-                    style: TextStyle(color: Colors.red[200])),
-              ),
-            );
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const SizedBox(
-                height: 180,
-                child: Center(
-                    child: Text('Sin canciones',
-                        style: TextStyle(color: Colors.white70))));
-          }
-          final tracks = snapshot.data!;
+    return FutureBuilder<List<SpotifyTrack>>(
+      future: futureTracks,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 180,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
           return SizedBox(
             height: 180,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: tracks.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
-              itemBuilder: (context, index) {
-                final track = tracks[index];
-                return _buildTrackCard(track);
-              },
+            child: Center(
+              child: Text('Error: \n${snapshot.error}',
+                  style: TextStyle(color: Colors.red[200])),
             ),
           );
-        },
-      ),
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox(
+              height: 180,
+              child: Center(
+                  child: Text('Sin canciones',
+                      style: TextStyle(color: Colors.white70))));
+        }
+        final tracks = snapshot.data!;
+        return SizedBox(
+          height: 180,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: tracks.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            itemBuilder: (context, index) {
+              final track = tracks[index];
+              return _buildTrackCard(track);
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -998,8 +1011,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
 }
 
 class _SpotifyGlobalSearchPlayerContent extends StatefulWidget {
-  final SliverToBoxAdapter Function(String) buildSectionTitle;
-  final SliverToBoxAdapter Function(Future<List<SpotifyTrack>>) buildHorizontalTrackList;
+  final Widget Function(String) buildSectionTitle;
+  final Widget Function(Future<List<SpotifyTrack>>) buildHorizontalTrackList;
   final Widget Function(SpotifyTrack) buildTrackCard;
   final Future<List<SpotifyTrack>> Function() getFavoriteTracksFuture;
   final Future<List<SpotifyTrack>> Function() getRecentlyPlayedFuture;
