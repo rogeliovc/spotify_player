@@ -261,40 +261,201 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
   }
 
   Widget _buildCalendarOnly() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
-      child: TableCalendar(
-        firstDay: DateTime.utc(2020, 1, 1),
-        lastDay: DateTime.utc(2030, 12, 31),
-        focusedDay: _focusedDay,
-        selectedDayPredicate: (day) =>
-            _selectedDay != null && isSameDay(_selectedDay, day),
-        onDaySelected: (selectedDay, focusedDay) {
-          setState(() {
-            _selectedDay = selectedDay;
-            _focusedDay = focusedDay;
-          });
-        },
-        calendarStyle: CalendarStyle(
-          todayDecoration: BoxDecoration(
-            color: Colors.blue.shade200,
-            shape: BoxShape.circle,
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.07),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Consumer<TaskProvider>(
+              builder: (context, taskProvider, _) {
+                // Crear un mapa de eventos: fecha -> lista de tareas pendientes
+                final Map<DateTime, List<dynamic>> taskEvents = {};
+                for (final task in taskProvider.tasks) {
+                  if (!task.completed) {
+                    final day = DateTime(task.dueDate.year, task.dueDate.month, task.dueDate.day);
+                    taskEvents.putIfAbsent(day, () => []).add(task);
+                  }
+                }
+                return TableCalendar(
+                  firstDay: DateTime.utc(2020, 1, 1),
+                  lastDay: DateTime.utc(2030, 12, 31),
+                  focusedDay: _focusedDay,
+                  selectedDayPredicate: (day) =>
+                      _selectedDay != null && isSameDay(_selectedDay, day),
+                  onDaySelected: (selectedDay, focusedDay) {
+                    setState(() {
+                      _selectedDay = selectedDay;
+                      _focusedDay = focusedDay;
+                    });
+                  },
+                  eventLoader: (day) {
+                    final key = DateTime(day.year, day.month, day.day);
+                    return taskEvents[key] ?? [];
+                  },
+                  calendarStyle: CalendarStyle(
+                    defaultTextStyle: const TextStyle(color: Colors.black87),
+                    weekendTextStyle: const TextStyle(color: Colors.blueGrey),
+                    outsideTextStyle: const TextStyle(color: Colors.black26),
+                    todayDecoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    todayTextStyle: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                    selectedDecoration: BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                    ),
+                    selectedTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    disabledTextStyle: const TextStyle(color: Colors.grey),
+                    markerDecoration: BoxDecoration(
+                      color: Colors.blueAccent,
+                      shape: BoxShape.circle,
+                    ),
+                    markersMaxCount: 1,
+                    markersAlignment: Alignment.bottomCenter,
+                    markersOffset: const PositionedOffset(bottom: 4),
+                  ),
+                  calendarBuilders: CalendarBuilders(
+                    markerBuilder: (context, day, events) {
+                      if (events.isNotEmpty) {
+                        return Positioned(
+                          bottom: 4,
+                          left: 0,
+                          right: 0,
+                          child: Center(
+                            child: Container(
+                              width: 7,
+                              height: 7,
+                              decoration: BoxDecoration(
+                                color: Colors.blueAccent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      return null;
+                    },
+                  ),
+                  headerStyle: const HeaderStyle(
+                    formatButtonVisible: false,
+                    titleCentered: true,
+                    titleTextStyle: TextStyle(
+                      color: Colors.black87,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                    leftChevronIcon: Icon(Icons.chevron_left, color: Colors.black87),
+                    rightChevronIcon: Icon(Icons.chevron_right, color: Colors.black87),
+                  ),
+                  daysOfWeekStyle: const DaysOfWeekStyle(
+                    weekdayStyle: TextStyle(color: Colors.black54, fontWeight: FontWeight.w600),
+                    weekendStyle: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.w600),
+                  ),
+                );
+              },
+            ),
           ),
-          selectedDecoration: BoxDecoration(
-            color: Colors.blue,
-            shape: BoxShape.circle,
-          ),
         ),
-        headerStyle: HeaderStyle(
-          formatButtonVisible: false,
-          titleCentered: true,
+        // Slider de tareas pendientes
+        Consumer<TaskProvider>(
+          builder: (context, taskProvider, _) {
+            // Filtrar solo tareas pendientes y ordenarlas por fecha
+            final pendingTasks = taskProvider.tasks
+                .where((t) => !t.completed)
+                .toList()
+              ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
+            if (pendingTasks.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Text(
+                  'No hay tareas pendientes',
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+              );
+            }
+            return SizedBox(
+              height: 140,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                itemCount: pendingTasks.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 18),
+                itemBuilder: (context, index) {
+                  final task = pendingTasks[index];
+                  return Container(
+                    width: 240,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF182B45),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.16),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: Colors.blue.withOpacity(0.25),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          task.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Hasta: 	${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          task.description,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         ),
-        daysOfWeekStyle: DaysOfWeekStyle(
-          weekendStyle: TextStyle(color: Colors.blueGrey),
-        ),
-      ),
+      ],
     );
   }
+
 
   SliverToBoxAdapter _buildSectionTitle(String title) {
     return SliverToBoxAdapter(
