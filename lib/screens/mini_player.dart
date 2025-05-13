@@ -4,7 +4,6 @@ import 'package:palette_generator/palette_generator.dart';
 import '../providers/player_provider.dart';
 import '../models/song_model.dart';
 import '../utils/spotify_search.dart';
-import '../widgets/spotify_search_field.dart';
 
 class MiniPlayer extends StatefulWidget {
   const MiniPlayer({super.key});

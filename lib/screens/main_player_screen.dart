@@ -21,10 +21,37 @@ class MainPlayerScreen extends StatefulWidget {
   State<MainPlayerScreen> createState() => _MainPlayerScreenState();
 }
 
-class _MainPlayerScreenState extends State<MainPlayerScreen> {
+class _MainPlayerScreenState extends State<MainPlayerScreen>
+    with WidgetsBindingObserver {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   int _selectedTab = 1; // 0: Player, 1: Home, 2: Tasks
+  int _lastTab = 1;
+  bool _calendarLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _lastTab = _selectedTab;
+  }
+
+  @override
+  void didUpdateWidget(covariant MainPlayerScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _lastTab = _selectedTab;
+  }
 
   Future<List<SpotifyDevice>> getSpotifyDevices(BuildContext context) async {
     final auth = AuthService();
@@ -147,6 +174,17 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
     }
   }
 
+  void _handleTabChange(int newTab) async {
+    if (_selectedTab == 2 && newTab == 1) {
+      // Al cambiar de "Tareas" a "Home", borra completadas
+      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+      await taskProvider.removeCompletedTasks();
+    }
+    setState(() {
+      _selectedTab = newTab;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Provee el context global al PlayerProvider para navegación segura
@@ -206,7 +244,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                               color: _selectedTab == 0
                                   ? Colors.white
                                   : Colors.white.withOpacity(0.6)),
-                          onPressed: () => setState(() => _selectedTab = 0),
+                          onPressed: () => _handleTabChange(0),
                         ),
                         const SizedBox(width: 8),
                         Container(
@@ -223,7 +261,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                                 color: _selectedTab == 1
                                     ? const Color(0xFF182B45)
                                     : Colors.white.withOpacity(0.6)),
-                            onPressed: () => setState(() => _selectedTab = 1),
+                            onPressed: () => _handleTabChange(1),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -232,7 +270,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                               color: _selectedTab == 2
                                   ? Colors.white
                                   : Colors.white.withOpacity(0.6)),
-                          onPressed: () => setState(() => _selectedTab = 2),
+                          onPressed: () => _handleTabChange(2),
                         ),
                       ],
                     ),
@@ -240,11 +278,51 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                 ),
                 const SizedBox(height: 20),
                 Expanded(
-                  child: _selectedTab == 1
-                      ? _buildCalendarOnly()
-                      : _selectedTab == 2
-                          ? _buildTaskManager()
-                          : _buildPlayerContent(),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 450), // 50ms menos
+                    switchInCurve: Curves.easeInOut, // Más fluido
+                    switchOutCurve: Curves.easeInOut, // Más fluido
+                    layoutBuilder: (currentChild, previousChildren) {
+                      return Stack(
+                        children: <Widget>[
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      );
+                    },
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
+                      // Animación fluida, compatible con pantallas de 120Hz
+                      final slide = Tween<Offset>(
+                        begin: const Offset(1.0, 0.0),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeInOutCubicEmphasized, // Más suave
+                        ),
+                      );
+                      return SlideTransition(
+                        position: slide,
+                        child: FadeTransition(
+                          opacity: animation,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Builder(
+                      key: ValueKey(_selectedTab),
+                      builder: (context) {
+                        if (_selectedTab == 1) {
+                          return _buildCalendarOnly();
+                        } else if (_selectedTab == 2) {
+                          return _buildTaskManager();
+                        } else {
+                          return _buildPlayerContent();
+                        }
+                      },
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -256,6 +334,61 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // Animación para el calendario
+  Widget _buildCalendarAnimated() {
+    return FutureBuilder<void>(
+      future: Future.delayed(const Duration(milliseconds: 300)),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          // Animación moderna de carga
+          return const Center(
+            child: AnimatedLoadingSpinner(),
+          );
+        }
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          child: _buildCalendarOnly(),
+        );
+      },
+    );
+  }
+
+  // Animación para el TaskManager
+  Widget _buildTaskManagerAnimated() {
+    return FutureBuilder<void>(
+      future: Future.delayed(const Duration(milliseconds: 300)),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(
+            child: AnimatedLoadingSpinner(),
+          );
+        }
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          child: _buildTaskManager(),
+        );
+      },
+    );
+  }
+
+  // Animación para el contenido del reproductor
+  Widget _buildPlayerContentAnimated() {
+    return FutureBuilder<void>(
+      future: Future.delayed(const Duration(milliseconds: 300)),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(
+            child: AnimatedLoadingSpinner(),
+          );
+        }
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          child: _buildPlayerContent(),
+        );
+      },
     );
   }
 
@@ -288,7 +421,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                   }
                 }
                 return TableCalendar(
-                    rowHeight: 54,
+                  rowHeight: 54,
                   firstDay: DateTime.utc(2020, 1, 1),
                   lastDay: DateTime.utc(2030, 12, 31),
                   focusedDay: _focusedDay,
@@ -314,14 +447,14 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                     ),
                     todayTextStyle: const TextStyle(
                         color: Colors.blue, fontWeight: FontWeight.bold),
-                    selectedDecoration: BoxDecoration(
+                    selectedDecoration: const BoxDecoration(
                       color: Colors.blue,
                       shape: BoxShape.circle,
                     ),
                     selectedTextStyle: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold),
                     disabledTextStyle: const TextStyle(color: Colors.grey),
-                    markerDecoration: BoxDecoration(
+                    markerDecoration: const BoxDecoration(
                       color: Colors.blueAccent,
                       shape: BoxShape.circle,
                     ),
@@ -340,7 +473,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                             child: Container(
                               width: 7,
                               height: 7,
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 color: Colors.blueAccent,
                                 shape: BoxShape.circle,
                               ),
@@ -384,8 +517,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
                 .toList()
               ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
             if (pendingTasks.isEmpty) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
                 child: Text(
                   'No hay tareas pendientes',
                   style: TextStyle(color: Colors.white70, fontSize: 16),
@@ -393,9 +526,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
               );
             }
             return SizedBox(
-                height: 130,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
+              height: 130,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 itemCount: pendingTasks.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 10),
@@ -461,13 +594,13 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         ),
         const SizedBox(height: 16),
         // Carrusel de escuchados recientemente
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
               'Escuchados recientemente',
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -678,8 +811,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         'Content-Type': 'application/json',
       },
     );
-    if (response.statusCode != 200)
+    if (response.statusCode != 200) {
       throw 'Error al obtener top tracks: \\n${response.body}';
+    }
     final data = json.decode(response.body);
     final items = data['items'] as List<dynamic>;
     return items.map(_spotifyTrackFromItem).toList();
@@ -698,8 +832,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         'Content-Type': 'application/json',
       },
     );
-    if (response.statusCode != 200)
+    if (response.statusCode != 200) {
       throw 'Error al obtener reproducidas recientemente: \\n${response.body}';
+    }
     final data = json.decode(response.body);
     final items = data['items'] as List<dynamic>;
     return items.map((item) => _spotifyTrackFromItem(item['track'])).toList();
@@ -718,8 +853,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         'Content-Type': 'application/json',
       },
     );
-    if (response.statusCode != 200)
+    if (response.statusCode != 200) {
       throw 'Error al obtener nuevos lanzamientos: \\n${response.body}';
+    }
     final data = json.decode(response.body);
     final items = (data['albums']['items'] as List<dynamic>);
     // Tomamos la primera canción de cada álbum
@@ -861,8 +997,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
         'Content-Type': 'application/json',
       },
     );
-    if (response.statusCode != 200)
+    if (response.statusCode != 200) {
       throw 'Error al obtener playlists: \n${response.body}';
+    }
     final data = json.decode(response.body);
     final items = data['items'] as List<dynamic>;
     return items.map((item) {
@@ -882,8 +1019,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
       onTap: () async {
         final auth = AuthService();
         final token = await auth.getAccessToken();
-        if (token == null)
+        if (token == null) {
           throw 'No se encontró el token de sesión de Spotify.';
+        }
 
         // Obtener las canciones de la playlist
         final playlistId = playlist.uri.split(':').last;
@@ -896,8 +1034,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen> {
             'Content-Type': 'application/json',
           },
         );
-        if (response.statusCode != 200)
+        if (response.statusCode != 200) {
           throw 'Error al obtener canciones de la playlist: \n${response.body}';
+        }
 
         final data = json.decode(response.body);
         final items = data['items'] as List<dynamic>;
@@ -1173,7 +1312,7 @@ class _SpotifyGlobalSearchPlayerContentState
               future: widget.getUserPlaylistsFuture(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return SliverToBoxAdapter(
+                  return const SliverToBoxAdapter(
                     child: SizedBox(
                       height: 180,
                       child: Center(child: CircularProgressIndicator()),
@@ -1217,6 +1356,59 @@ class _SpotifyGlobalSearchPlayerContentState
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ],
+    );
+  }
+}
+
+// Animación moderna de carga (puedes mover esto a un archivo aparte si lo deseas)
+class AnimatedLoadingSpinner extends StatefulWidget {
+  const AnimatedLoadingSpinner({Key? key}) : super(key: key);
+
+  @override
+  State<AnimatedLoadingSpinner> createState() => _AnimatedLoadingSpinnerState();
+}
+
+class _AnimatedLoadingSpinnerState extends State<AnimatedLoadingSpinner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller =
+      AnimationController(vsync: this, duration: const Duration(seconds: 1))
+        ..repeat();
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RotationTransition(
+      turns: _controller,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: SweepGradient(
+            colors: [
+              Colors.blueAccent,
+              Colors.blue,
+              Colors.lightBlueAccent,
+              Colors.blueAccent.withOpacity(0.1),
+              Colors.blueAccent,
+            ],
+            stops: const [0.0, 0.4, 0.7, 0.9, 1.0],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFF0E1928),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

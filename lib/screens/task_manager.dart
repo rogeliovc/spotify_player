@@ -8,17 +8,22 @@ import '../services/task_storage.dart';
 class TaskProvider with ChangeNotifier {
   final TaskStorage _storage = TaskStorage();
   final List<Task> _tasks = [];
+  bool _loading = true;
 
   List<Task> get tasks => List.unmodifiable(_tasks);
+  bool get loading => _loading;
 
   TaskProvider() {
     _loadTasks();
   }
 
   Future<void> _loadTasks() async {
+    _loading = true;
+    notifyListeners();
     final tasks = await _storage.loadTasks();
     _tasks.clear();
     _tasks.addAll(tasks);
+    _loading = false;
     notifyListeners();
   }
 
@@ -59,6 +64,11 @@ class TaskProvider with ChangeNotifier {
       tempo: t.tempo,
       completed: !t.completed,
     );
+    notifyListeners();
+  }
+
+  Future<void> removeCompletedTasks() async {
+    _tasks.removeWhere((t) => t.completed);
     await _storage.saveTasks(_tasks);
     notifyListeners();
   }
@@ -67,120 +77,224 @@ class TaskProvider with ChangeNotifier {
 class TaskManagerScreen extends StatelessWidget {
   const TaskManagerScreen({Key? key}) : super(key: key);
 
+  Future<void> _confirmCompleteTask(BuildContext context, int i,
+      TaskProvider taskProvider, bool completed) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          decoration: BoxDecoration(
+            color: const Color(0xFF182B45),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                completed ? Icons.undo : Icons.check_circle,
+                color: completed ? Colors.orange : Colors.green,
+                size: 48,
+              ),
+              const SizedBox(height: 18),
+              Text(
+                completed
+                    ? '¿Quieres marcar esta tarea como pendiente?'
+                    : '¿Seguro que quieres marcar esta tarea como completada?',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: const Text('Cancelar'),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: completed ? Colors.orange : Colors.green,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child:
+                        Text(completed ? 'Marcar como pendiente' : 'Completar'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (result == true) {
+      await taskProvider.toggleTaskCompleted(i);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<TaskProvider>(
       builder: (context, taskProvider, _) {
         return Stack(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Tareas',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                if (taskProvider.tasks.isEmpty)
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 24),
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(220),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'No hay tareas pendientes',
-                        style: TextStyle(color: Colors.black54, fontSize: 16),
-                      ),
-                    ),
-                  ),
-                ...taskProvider.tasks.asMap().entries.map((entry) {
-                  final i = entry.key;
-                  final t = entry.value;
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 18),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF052B44),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              child: taskProvider.loading
+                  ? Center(
+                      key: const ValueKey('loading'),
+                      child: SizedBox(
+                        width: 60,
+                        height: 60,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 6,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.blueAccent),
                         ),
-                      ],
-                    ),
-                    child: ListTile(
-                      title: Text(
-                        t.title,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 17),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      subtitle: Column(
+                    )
+                  : SingleChildScrollView(
+                      key: const ValueKey('content'),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Hasta: ${_dueDateText(t.dueDate)}',
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 13),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            t.description,
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 14),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 7),
-                          Row(
-                            children: [
-                              _taskTypeChip(t.taskType),
-                              const SizedBox(width: 6),
-                              _energyLevelChip(t.energyLevel),
-                            ],
-                          ),
-                        ],
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              t.completed
-                                  ? Icons.check_circle
-                                  : Icons.radio_button_unchecked,
-                              color:
-                                  t.completed ? Colors.green : Colors.white38,
-                            ),
-                            onPressed: () =>
-                                taskProvider.toggleTaskCompleted(i),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.info_outline,
-                                color: Colors.white70),
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => TaskDetailsScreen(task: t),
+                          const Text('Tareas',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 16),
+                          if (taskProvider.tasks.isEmpty)
+                            Container(
+                              margin: const EdgeInsets.symmetric(vertical: 24),
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(220),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  'No hay tareas pendientes',
+                                  style: TextStyle(
+                                      color: Colors.black54, fontSize: 16),
                                 ),
-                              );
-                            },
-                          ),
+                              ),
+                            ),
+                          ...taskProvider.tasks.asMap().entries.map((entry) {
+                            final i = entry.key;
+                            final t = entry.value;
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 18),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF052B44),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: ListTile(
+                                title: Text(
+                                  t.title,
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 17),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Hasta: ${_dueDateText(t.dueDate)}',
+                                      style: const TextStyle(
+                                          color: Colors.white70, fontSize: 13),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      t.description,
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 14),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 7),
+                                    Row(
+                                      children: [
+                                        _taskTypeChip(t.taskType),
+                                        const SizedBox(width: 6),
+                                        _energyLevelChip(t.energyLevel),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        t.completed
+                                            ? Icons.check_circle
+                                            : Icons.radio_button_unchecked,
+                                        color: t.completed
+                                            ? Colors.green
+                                            : Colors.white38,
+                                      ),
+                                      onPressed: () => _confirmCompleteTask(
+                                          context,
+                                          i,
+                                          taskProvider,
+                                          t.completed),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.info_outline,
+                                          color: Colors.white70),
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                TaskDetailsScreen(task: t),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          const SizedBox(height: 70),
                         ],
                       ),
                     ),
-                  );
-                }).toList(),
-                const SizedBox(height: 70),
-              ],
             ),
             Positioned(
               bottom: 0,

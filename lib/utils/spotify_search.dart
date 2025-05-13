@@ -10,8 +10,9 @@ class SpotifySearchService {
     final token = await auth.getAccessToken();
     print(
         '[SpotifySearch] token: ${token != null ? '${token.substring(0, 10)}...' : 'NULL'}');
-    if (token == null)
+    if (token == null) {
       throw Exception('No se encontró el token de sesión de Spotify.');
+    }
 
     final url = Uri.parse(
         'https://api.spotify.com/v1/search?q=${Uri.encodeComponent(query)}&type=track&limit=$limit');
