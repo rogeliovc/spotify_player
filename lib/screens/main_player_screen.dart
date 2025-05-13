@@ -393,7 +393,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
   }
 
   Widget _buildCalendarOnly() {
-    return Column(
+    return SingleChildScrollView(
+      child: Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -613,6 +614,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
           child: _buildHorizontalTrackList(_getRecentlyPlayedFuture()),
         ),
       ],
+    ),
     );
   }
 

@@ -464,7 +464,7 @@ class _TaskAdderState extends State<TaskAdder> {
             style: TextStyle(fontFamily: 'Serif', color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(18),
         child: Form(
           key: _formKey,
