@@ -122,7 +122,8 @@ class MiniPlayer extends StatelessWidget {
           // ...otros controles del mini reproductor (play, pause, etc.)...
           if (currentSong != null && currentSong.id.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.playlist_add, color: Color(0xFFe0c36a)),
+              icon: const Icon(Icons.playlist_add,
+                  color: Color.fromARGB(255, 255, 255, 255)),
               tooltip: 'Agregar a playlist',
               onPressed: () {
                 final trackUri = 'spotify:track:${currentSong.id}';

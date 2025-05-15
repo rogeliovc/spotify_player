@@ -4,6 +4,9 @@ import 'package:palette_generator/palette_generator.dart';
 import '../providers/player_provider.dart';
 import '../models/song_model.dart';
 import '../utils/spotify_search.dart';
+import '../services/auth_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class MiniPlayer extends StatefulWidget {
   const MiniPlayer({super.key});
@@ -68,6 +71,108 @@ class _MiniPlayerState extends State<MiniPlayer> {
     }
   }
 
+  Future<List<Map<String, dynamic>>> _fetchUserPlaylists(
+      BuildContext context) async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    if (token == null) throw 'No se encontró el token de sesión de Spotify.';
+    final url = Uri.parse('https://api.spotify.com/v1/me/playlists?limit=50');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw 'Error al obtener playlists: ${response.body}';
+    }
+    final data = json.decode(response.body);
+    final items = data['items'] as List<dynamic>;
+    return items
+        .map((item) => {
+              'id': item['id'],
+              'name': item['name'],
+            })
+        .toList();
+  }
+
+  Future<void> _addTrackToPlaylist(
+      BuildContext context, String playlistId, String trackUri) async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay sesión activa de Spotify.')),
+      );
+      return;
+    }
+    final url =
+        Uri.parse('https://api.spotify.com/v1/playlists/$playlistId/tracks');
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        'uris': [trackUri]
+      }),
+    );
+    if (response.statusCode == 201) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Canción agregada a la playlist')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al agregar canción: ${response.body}')),
+      );
+    }
+  }
+
+  void _onAddToPlaylistPressed(BuildContext context, String trackUri) async {
+    try {
+      final playlists = await _fetchUserPlaylists(context);
+      if (playlists.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No tienes playlists disponibles')),
+        );
+        return;
+      }
+      String? selectedId;
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Agregar a playlist'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: playlists.length,
+              itemBuilder: (context, index) {
+                final pl = playlists[index];
+                return ListTile(
+                  title: Text(pl['name']),
+                  onTap: () {
+                    selectedId = pl['id'];
+                    Navigator.of(context).pop();
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      if (selectedId != null) {
+        await _addTrackToPlaylist(context, selectedId!, trackUri);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
   void _expandSheet() {
     showModalBottomSheet(
       context: context,
@@ -94,7 +199,13 @@ class _MiniPlayerState extends State<MiniPlayer> {
           alignment: Alignment.bottomCenter,
           child: GestureDetector(
             onTap: _expandSheet,
-            child: _MiniPlayerWidget(dominantColor: _dominantColor),
+            child: _MiniPlayerWidget(
+              dominantColor: _dominantColor,
+              onAddToPlaylistPressed: () {
+                final trackUri = 'spotify:track:${song.id}';
+                _onAddToPlaylistPressed(context, trackUri);
+              },
+            ),
           ),
         );
       },
@@ -104,8 +215,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
 
 class _MiniPlayerWidget extends StatelessWidget {
   final Color? dominantColor;
+  final VoidCallback onAddToPlaylistPressed;
 
-  const _MiniPlayerWidget({this.dominantColor});
+  const _MiniPlayerWidget({
+    this.dominantColor,
+    required this.onAddToPlaylistPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -190,6 +305,11 @@ class _MiniPlayerWidget extends StatelessWidget {
                 onPressed: () async {
                   await player.next();
                 },
+              ),
+              IconButton(
+                icon: const Icon(Icons.playlist_add, color: Color(0xFFe0c36a)),
+                tooltip: 'Agregar a playlist',
+                onPressed: onAddToPlaylistPressed,
               ),
             ],
           ),
@@ -508,6 +628,15 @@ class _ExpandedPlayer extends StatelessWidget {
                           _showPlaylist(context, player);
                         },
                       ),
+                      IconButton(
+                        icon: const Icon(Icons.playlist_add,
+                            color: Color(0xFFe0c36a), size: 28),
+                        tooltip: 'Agregar a playlist',
+                        onPressed: () {
+                          final trackUri = 'spotify:track:${song.id}';
+                          _onAddToPlaylistPressed(context, trackUri);
+                        },
+                      ),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -565,5 +694,107 @@ class _ExpandedPlayer extends StatelessWidget {
     final minutes = twoDigits(d.inMinutes.remainder(60));
     final seconds = twoDigits(d.inSeconds.remainder(60));
     return '$minutes:$seconds';
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchUserPlaylists(
+      BuildContext context) async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    if (token == null) throw 'No se encontró el token de sesión de Spotify.';
+    final url = Uri.parse('https://api.spotify.com/v1/me/playlists?limit=50');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw 'Error al obtener playlists: ${response.body}';
+    }
+    final data = json.decode(response.body);
+    final items = data['items'] as List<dynamic>;
+    return items
+        .map((item) => {
+              'id': item['id'],
+              'name': item['name'],
+            })
+        .toList();
+  }
+
+  Future<void> _addTrackToPlaylist(
+      BuildContext context, String playlistId, String trackUri) async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay sesión activa de Spotify.')),
+      );
+      return;
+    }
+    final url =
+        Uri.parse('https://api.spotify.com/v1/playlists/$playlistId/tracks');
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        'uris': [trackUri]
+      }),
+    );
+    if (response.statusCode == 201) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Canción agregada a la playlist')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al agregar canción: ${response.body}')),
+      );
+    }
+  }
+
+  void _onAddToPlaylistPressed(BuildContext context, String trackUri) async {
+    try {
+      final playlists = await _fetchUserPlaylists(context);
+      if (playlists.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No tienes playlists disponibles')),
+        );
+        return;
+      }
+      String? selectedId;
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Agregar a playlist'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: playlists.length,
+              itemBuilder: (context, index) {
+                final pl = playlists[index];
+                return ListTile(
+                  title: Text(pl['name']),
+                  onTap: () {
+                    selectedId = pl['id'];
+                    Navigator.of(context).pop();
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      if (selectedId != null) {
+        await _addTrackToPlaylist(context, selectedId!, trackUri);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 }
