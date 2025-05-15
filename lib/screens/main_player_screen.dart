@@ -432,9 +432,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
                 const SizedBox(height: 20),
                 Expanded(
                   child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 450), // 50ms menos
-                    switchInCurve: Curves.easeInOut, // Más fluido
-                    switchOutCurve: Curves.easeInOut, // Más fluido
+                    duration: const Duration(milliseconds: 450),
+                    switchInCurve: Curves.easeInOut,
+                    switchOutCurve: Curves.easeInOut,
                     layoutBuilder: (currentChild, previousChildren) {
                       return Stack(
                         children: <Widget>[
@@ -445,14 +445,13 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
                     },
                     transitionBuilder:
                         (Widget child, Animation<double> animation) {
-                      // Animación fluida, compatible con pantallas de 120Hz
                       final slide = Tween<Offset>(
                         begin: const Offset(1.0, 0.0),
                         end: Offset.zero,
                       ).animate(
                         CurvedAnimation(
                           parent: animation,
-                          curve: Curves.easeInOutCubicEmphasized, // Más suave
+                          curve: Curves.easeInOutCubicEmphasized,
                         ),
                       );
                       return SlideTransition(
@@ -467,11 +466,11 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
                       key: ValueKey(_selectedTab),
                       builder: (context) {
                         if (_selectedTab == 1) {
-                          return _buildCalendarOnly();
+                          return _buildCalendarAnimated();
                         } else if (_selectedTab == 2) {
-                          return _buildTaskManager();
+                          return _buildTaskManagerAnimated();
                         } else {
-                          return _buildPlayerContent();
+                          return _buildPlayerContentAnimated();
                         }
                       },
                     ),
@@ -496,9 +495,33 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
       future: Future.delayed(const Duration(milliseconds: 300)),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          // Animación moderna de carga
-          return const Center(
-            child: AnimatedLoadingSpinner(),
+          // Shimmer en vez de spinner
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ShimmerLoader(height: 32, width: 180),
+                const SizedBox(height: 24),
+                ShimmerLoader(
+                    height: 220,
+                    width: double.infinity,
+                    borderRadius: BorderRadius.circular(18)),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    ShimmerLoader(height: 24, width: 120),
+                    const SizedBox(width: 12),
+                    ShimmerLoader(height: 24, width: 80),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                ShimmerLoader(
+                    height: 110,
+                    width: double.infinity,
+                    borderRadius: BorderRadius.circular(18)),
+              ],
+            ),
           );
         }
         return AnimatedSwitcher(
@@ -515,8 +538,22 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
       future: Future.delayed(const Duration(milliseconds: 300)),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(
-            child: AnimatedLoadingSpinner(),
+          // Shimmer en vez de spinner
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                4,
+                (i) => Padding(
+                  padding: const EdgeInsets.only(bottom: 18),
+                  child: ShimmerLoader(
+                      height: 70,
+                      width: double.infinity,
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
           );
         }
         return AnimatedSwitcher(
@@ -533,8 +570,31 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
       future: Future.delayed(const Duration(milliseconds: 300)),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(
-            child: AnimatedLoadingSpinner(),
+          // Shimmer en vez de spinner
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ShimmerLoader(height: 32, width: 180),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    ShimmerLoader(
+                        height: 140,
+                        width: 140,
+                        borderRadius: BorderRadius.circular(16)),
+                    const SizedBox(width: 16),
+                    ShimmerLoader(
+                        height: 140,
+                        width: 140,
+                        borderRadius: BorderRadius.circular(16)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                ShimmerLoader(height: 32, width: 180),
+              ],
+            ),
           );
         }
         return AnimatedSwitcher(
@@ -1514,55 +1574,38 @@ class _SpotifyGlobalSearchPlayerContentState
   }
 }
 
-// Animación moderna de carga (puedes mover esto a un archivo aparte si lo deseas)
-class AnimatedLoadingSpinner extends StatefulWidget {
-  const AnimatedLoadingSpinner({Key? key}) : super(key: key);
-
-  @override
-  State<AnimatedLoadingSpinner> createState() => _AnimatedLoadingSpinnerState();
-}
-
-class _AnimatedLoadingSpinnerState extends State<AnimatedLoadingSpinner>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller =
-      AnimationController(vsync: this, duration: const Duration(seconds: 1))
-        ..repeat();
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+// --- SHIMMER LOADER WIDGET ---
+class ShimmerLoader extends StatelessWidget {
+  final double height;
+  final double width;
+  final BorderRadius borderRadius;
+  const ShimmerLoader({
+    this.height = 24,
+    this.width = double.infinity,
+    this.borderRadius = const BorderRadius.all(Radius.circular(12)),
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return RotationTransition(
-      turns: _controller,
-      child: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: SweepGradient(
-            colors: [
-              Colors.blueAccent,
-              Colors.blue,
-              Colors.lightBlueAccent,
-              Colors.blueAccent.withOpacity(0.1),
-              Colors.blueAccent,
-            ],
-            stops: const [0.0, 0.4, 0.7, 0.9, 1.0],
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.3, end: 1.0),
+      duration: const Duration(milliseconds: 1200),
+      curve: Curves.easeInOut,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
           child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFF0E1928),
-              shape: BoxShape.circle,
+            height: height,
+            width: width,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.13 + 0.13 * value),
+              borderRadius: borderRadius,
             ),
           ),
-        ),
-      ),
+        );
+      },
+      onEnd: () {},
     );
   }
 }

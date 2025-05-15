@@ -183,8 +183,12 @@ class _MiniPlayerState extends State<MiniPlayer> {
         minChildSize: 0.45,
         maxChildSize: 0.85,
         expand: false,
-        builder: (context, scrollController) =>
-            _ExpandedPlayer(scrollController: scrollController),
+        builder: (context, scrollController) => _ExpandedPlayer(
+          scrollController: scrollController,
+          onAddToPlaylistPressed: (trackUri) {
+            _onAddToPlaylistPressed(context, trackUri);
+          },
+        ),
       ),
     );
   }
@@ -199,12 +203,16 @@ class _MiniPlayerState extends State<MiniPlayer> {
           alignment: Alignment.bottomCenter,
           child: GestureDetector(
             onTap: _expandSheet,
-            child: _MiniPlayerWidget(
-              dominantColor: _dominantColor,
-              onAddToPlaylistPressed: () {
-                final trackUri = 'spotify:track:${song.id}';
-                _onAddToPlaylistPressed(context, trackUri);
-              },
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 350),
+              child: _MiniPlayerWidget(
+                key: ValueKey(song.id),
+                dominantColor: _dominantColor,
+                onAddToPlaylistPressed: () {
+                  final trackUri = 'spotify:track:${song.id}';
+                  _onAddToPlaylistPressed(context, trackUri);
+                },
+              ),
             ),
           ),
         );
@@ -218,9 +226,10 @@ class _MiniPlayerWidget extends StatelessWidget {
   final VoidCallback onAddToPlaylistPressed;
 
   const _MiniPlayerWidget({
+    Key? key,
     this.dominantColor,
     required this.onAddToPlaylistPressed,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -347,7 +356,12 @@ class _PlaylistSearchState extends InheritedWidget {
 
 class _ExpandedPlayer extends StatelessWidget {
   final ScrollController scrollController;
-  const _ExpandedPlayer({required this.scrollController});
+  final void Function(String trackUri) onAddToPlaylistPressed;
+
+  const _ExpandedPlayer({
+    required this.scrollController,
+    required this.onAddToPlaylistPressed,
+  });
 
   void _showPlaylist(BuildContext context, PlayerProvider player) {
     showModalBottomSheet(
@@ -633,8 +647,13 @@ class _ExpandedPlayer extends StatelessWidget {
                             color: Color(0xFFe0c36a), size: 28),
                         tooltip: 'Agregar a playlist',
                         onPressed: () {
-                          final trackUri = 'spotify:track:${song.id}';
-                          _onAddToPlaylistPressed(context, trackUri);
+                          final player = Provider.of<PlayerProvider>(context,
+                              listen: false);
+                          final song = player.currentSong;
+                          if (song != null) {
+                            final trackUri = 'spotify:track:${song.id}';
+                            onAddToPlaylistPressed(trackUri);
+                          }
                         },
                       ),
                     ],

@@ -20,6 +20,8 @@ class TaskProvider with ChangeNotifier {
   Future<void> _loadTasks() async {
     _loading = true;
     notifyListeners();
+    await Future.delayed(
+        const Duration(milliseconds: 400)); // Animación de carga inicial
     final tasks = await _storage.loadTasks();
     _tasks.clear();
     _tasks.addAll(tasks);
