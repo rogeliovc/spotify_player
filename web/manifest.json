@@ -1,6 +1,6 @@
 {
-    "name": "spotify_player",
-    "short_name": "spotify_player",
+    "name": "Sincronía",
+    "short_name": "Sincronía",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
