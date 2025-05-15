@@ -107,7 +107,7 @@ class TaskManagerScreen extends StatelessWidget {
                 size: 48,
               ),
               const SizedBox(height: 18),
-              Text(
+               Text(
                 completed
                     ? '¿Quieres marcar esta tarea como pendiente?'
                     : '¿Seguro que quieres marcar esta tarea como completada?',
@@ -131,7 +131,8 @@ class TaskManagerScreen extends StatelessWidget {
                     onPressed: () => Navigator.of(ctx).pop(false),
                     child: const Text('Cancelar'),
                   ),
-                  ElevatedButton(
+                  Expanded(
+                  child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: completed ? Colors.orange : Colors.green,
                       padding: const EdgeInsets.symmetric(
@@ -142,7 +143,11 @@ class TaskManagerScreen extends StatelessWidget {
                     ),
                     onPressed: () => Navigator.of(ctx).pop(true),
                     child:
-                        Text(completed ? 'Marcar como pendiente' : 'Completar'),
+                        Text(completed ? 'Marcar como pendiente' : 'Completar',
+                          style: TextStyle(
+                            color: completed ? Colors.black : Colors.white,),
+                  ),
+                  ),
                   ),
                 ],
               ),
@@ -418,8 +423,7 @@ class _TaskAdderState extends State<TaskAdder> {
   void _validateForm() {
     setState(() {
       _isFormValid = _title.isNotEmpty &&
-          _dueDate != null &&
-          (_classical || _lofi || _electronic || _jazz || _rock);
+          _dueDate != null;
     });
   }
 
