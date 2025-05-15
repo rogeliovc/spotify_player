@@ -14,9 +14,30 @@ class AuthService {
     await _storage.delete(key: 'token_expiry');
     await _storage.delete(key: 'pkce_code_verifier');
   }
-  static const String clientId = String.fromEnvironment('SPOTIFY_CLIENT_ID', defaultValue: '4caddaabcd134c6da47d4f7d1c7877ba');
+
+  /// Borra todos los tokens y datos de sesión y fuerza re-autenticación
+  Future<void> forceReauth() async {
+    await signOut();
+    print(
+        '[AuthService] Tokens eliminados. Debes iniciar sesión nuevamente para aceptar los nuevos permisos.');
+  }
+
+  static const String clientId = String.fromEnvironment('SPOTIFY_CLIENT_ID',
+      defaultValue: '4caddaabcd134c6da47d4f7d1c7877ba');
   static const String redirectUri = 'sincronia://callback';
-  static const String scopes = 'user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-read-collaborative streaming user-top-read user-read-recently-played user-read-email';
+  static const List<String> scopes = [
+    'user-read-playback-state',
+    'user-modify-playback-state',
+    'user-read-currently-playing',
+    'playlist-read-private',
+    'playlist-read-collaborative',
+    'streaming',
+    'user-top-read',
+    'user-read-recently-played',
+    'user-read-email',
+    'playlist-modify-private',
+    'playlist-modify-public',
+  ];
   static const String tokenUrl = 'https://accounts.spotify.com/api/token';
   static const String authUrl = 'https://accounts.spotify.com/authorize';
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
@@ -36,8 +57,9 @@ class AuthService {
       await _storage.write(key: 'pkce_code_verifier', value: _codeVerifier);
       final codeChallenge = _generateCodeChallenge(_codeVerifier!);
 
-      final url = Uri.parse('$authUrl?response_type=code&client_id=$clientId&redirect_uri=$redirectUri&scope=$scopes&code_challenge_method=S256&code_challenge=$codeChallenge');
-      
+      final url = Uri.parse(
+          '$authUrl?response_type=code&client_id=$clientId&redirect_uri=$redirectUri&scope=${scopes.join(' ')}&code_challenge_method=S256&code_challenge=$codeChallenge');
+
       print('[AuthService] Iniciando autenticación...');
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         throw 'No se pudo abrir el navegador para autenticación';
@@ -46,14 +68,17 @@ class AuthService {
       // Esperar el callback usando app_links
       print('[AuthService] Esperando callback...');
       final appLinks = AppLinks();
-      final callbackUri = await appLinks.uriLinkStream.firstWhere(
-        (uri) => uri.toString().startsWith(redirectUri),
-        orElse: () => throw 'No se recibió el callback de autenticación',
-      ).timeout(
-        const Duration(seconds: 60),
-        onTimeout: () => throw 'Tiempo de espera agotado. Por favor, intenta nuevamente.',
-      );
-      
+      final callbackUri = await appLinks.uriLinkStream
+          .firstWhere(
+            (uri) => uri.toString().startsWith(redirectUri),
+            orElse: () => throw 'No se recibió el callback de autenticación',
+          )
+          .timeout(
+            const Duration(seconds: 60),
+            onTimeout: () =>
+                throw 'Tiempo de espera agotado. Por favor, intenta nuevamente.',
+          );
+
       print('[AuthService] Callback recibido: ${callbackUri.toString()}');
       final code = callbackUri.queryParameters['code'];
       if (code == null) {
@@ -154,12 +179,18 @@ class AuthService {
         final data = json.decode(response.body);
         await _storage.write(key: 'access_token', value: data['access_token']);
         if (data['refresh_token'] != null) {
-          await _storage.write(key: 'refresh_token', value: data['refresh_token']);
+          await _storage.write(
+              key: 'refresh_token', value: data['refresh_token']);
         }
-        await _storage.write(key: 'token_expiry', value: (DateTime.now().millisecondsSinceEpoch + (data['expires_in'] * 1000)).toString());
+        await _storage.write(
+            key: 'token_expiry',
+            value: (DateTime.now().millisecondsSinceEpoch +
+                    (data['expires_in'] * 1000))
+                .toString());
         return true;
       } else {
-        print('Error al refrescar token: ${response.statusCode} ${response.body}');
+        print(
+            'Error al refrescar token: ${response.statusCode} ${response.body}');
         return false;
       }
     } catch (e) {
@@ -186,7 +217,7 @@ class AuthService {
     if (_codeVerifier == null) {
       throw 'No se encontró el code_verifier original. Debes iniciar sesión nuevamente.';
     }
-    
+
     try {
       print('[AuthService] Enviando solicitud de token...');
       final response = await http.post(
@@ -200,16 +231,22 @@ class AuthService {
           'code_verifier': _codeVerifier!,
         },
       );
-    
+
       if (response.statusCode == 200) {
         print('[AuthService] Token recibido exitosamente');
         final data = json.decode(response.body);
         await _storage.write(key: 'access_token', value: data['access_token']);
-        await _storage.write(key: 'refresh_token', value: data['refresh_token']);
-        await _storage.write(key: 'token_expiry', value: (DateTime.now().millisecondsSinceEpoch + (data['expires_in'] * 1000)).toString());
+        await _storage.write(
+            key: 'refresh_token', value: data['refresh_token']);
+        await _storage.write(
+            key: 'token_expiry',
+            value: (DateTime.now().millisecondsSinceEpoch +
+                    (data['expires_in'] * 1000))
+                .toString());
       } else {
         final error = json.decode(response.body);
-        print('[AuthService] Error al intercambiar código: ${error['error_description'] ?? response.body}');
+        print(
+            '[AuthService] Error al intercambiar código: ${error['error_description'] ?? response.body}');
         throw 'Error al intercambiar el código por token: ${error['error_description'] ?? response.body}';
       }
     } catch (e) {

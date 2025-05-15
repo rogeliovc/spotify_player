@@ -185,6 +185,154 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
     });
   }
 
+  // NUEVO: Crear playlist en Spotify con logs
+  Future<void> _createPlaylist(BuildContext context) async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    debugPrint('[Sincronía] Token obtenido: ${token != null ? "OK" : "NULL"}');
+    if (token == null) {
+      debugPrint('[Sincronía] No hay sesión activa de Spotify.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay sesión activa de Spotify.')),
+      );
+      return;
+    }
+
+    // Obtener el user_id
+    final userResp = await http.get(
+      Uri.parse('https://api.spotify.com/v1/me'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    debugPrint(
+        '[Sincronía] Respuesta usuario: ${userResp.statusCode} ${userResp.body}');
+    if (userResp.statusCode != 200) {
+      debugPrint('[Sincronía] No se pudo obtener tu usuario de Spotify.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No se pudo obtener tu usuario de Spotify.')),
+      );
+      return;
+    }
+    final userId = (json.decode(userResp.body))['id'];
+    debugPrint('[Sincronía] userId: $userId');
+
+    // Mostrar diálogo para nombre y descripción
+    String playlistName = '';
+    String playlistDesc = '';
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Crear nueva playlist'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Nombre'),
+                onChanged: (v) => playlistName = v,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Escribe un nombre'
+                    : null,
+              ),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Descripción'),
+                onChanged: (v) => playlistDesc = v,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.of(context).pop(true);
+              }
+            },
+            child: const Text('Crear'),
+          ),
+        ],
+      ),
+    );
+    debugPrint(
+        '[Sincronía] Dialog result: $result, nombre: $playlistName, desc: $playlistDesc');
+    if (result != true) return;
+
+    // Llamar a la API de Spotify para crear la playlist
+    final resp = await http.post(
+      Uri.parse('https://api.spotify.com/v1/users/$userId/playlists'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        'name': playlistName,
+        'description': playlistDesc,
+        'public': false,
+      }),
+    );
+    debugPrint(
+        '[Sincronía] Respuesta creación playlist: ${resp.statusCode} ${resp.body}');
+    if (resp.statusCode == 201) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('¡Playlist creada exitosamente!')),
+      );
+      setState(() {}); // Refresca la pantalla para mostrar la nueva playlist
+    } else {
+      String msg = 'No se pudo crear la playlist.';
+      try {
+        final err = json.decode(resp.body);
+        if (err['error']?['message'] != null) {
+          msg += ' ${err['error']['message']}';
+        }
+      } catch (e) {
+        debugPrint('[Sincronía] Error parseando respuesta: $e');
+      }
+      debugPrint('[Sincronía] $msg');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    }
+  }
+
+  Future<void> addTracksToPlaylist(
+      String playlistId, List<String> trackUris) async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    if (token == null) {
+      debugPrint('[Sincronía] No hay sesión activa de Spotify.');
+      return;
+    }
+
+    final url =
+        Uri.parse('https://api.spotify.com/v1/playlists/$playlistId/tracks');
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({'uris': trackUris}),
+    );
+
+    debugPrint(
+        '[Sincronía] Respuesta agregar tracks: ${response.statusCode} ${response.body}');
+    if (response.statusCode == 201) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Canciones agregadas a la playlist')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al agregar canciones: ${response.body}')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Provee el context global al PlayerProvider para navegación segura
@@ -211,6 +359,11 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
           },
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.playlist_add, color: Color(0xFFe0c36a)),
+            tooltip: 'Crear playlist',
+            onPressed: () => _createPlaylist(context),
+          ),
           IconButton(
             icon: const Icon(Icons.devices, color: Colors.white70),
             tooltip: 'Mostrar dispositivos',
@@ -1315,11 +1468,9 @@ class _SpotifyGlobalSearchPlayerContentState
               future: widget.getUserPlaylistsFuture(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SliverToBoxAdapter(
-                    child: SizedBox(
-                      height: 180,
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
+                  return const SizedBox(
+                    height: 180,
+                    child: Center(child: CircularProgressIndicator()),
                   );
                 }
                 if (snapshot.hasError) {
