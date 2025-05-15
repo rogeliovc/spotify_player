@@ -66,7 +66,7 @@ class _MyAppState extends State<MyApp> {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, _) {
         return MaterialApp(
-          title: 'Spotify Player',
+          title: 'Sincronía',
           theme: themeProvider.theme,
           home: _isLoading
               ? const Scaffold(
@@ -85,8 +85,3 @@ class _MyAppState extends State<MyApp> {
     );
   }
 }
-
-
-
-
-

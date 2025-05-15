@@ -1,7 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=/usr/local/flutter"
-export "FLUTTER_APPLICATION_PATH=/home/rogeliovc/CascadeProjects/spotify_player"
+export "FLUTTER_ROOT=/home/gabolectric/development/flutter"
+export "FLUTTER_APPLICATION_PATH=/home/gabolectric/development/spotify_player"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_TARGET=lib/main.dart"
 export "FLUTTER_BUILD_DIR=build"

@@ -107,7 +107,7 @@ class TaskManagerScreen extends StatelessWidget {
                 size: 48,
               ),
               const SizedBox(height: 18),
-               Text(
+              Text(
                 completed
                     ? '¿Quieres marcar esta tarea como pendiente?'
                     : '¿Seguro que quieres marcar esta tarea como completada?',
@@ -132,22 +132,24 @@ class TaskManagerScreen extends StatelessWidget {
                     child: const Text('Cancelar'),
                   ),
                   Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: completed ? Colors.orange : Colors.green,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            completed ? Colors.orange : Colors.green,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: Text(
+                        completed ? 'Marcar como pendiente' : 'Completar',
+                        style: TextStyle(
+                          color: completed ? Colors.black : Colors.white,
+                        ),
                       ),
                     ),
-                    onPressed: () => Navigator.of(ctx).pop(true),
-                    child:
-                        Text(completed ? 'Marcar como pendiente' : 'Completar',
-                          style: TextStyle(
-                            color: completed ? Colors.black : Colors.white,),
-                  ),
-                  ),
                   ),
                 ],
               ),
@@ -170,8 +172,8 @@ class TaskManagerScreen extends StatelessWidget {
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 400),
               child: taskProvider.loading
-                  ? Center(
-                      key: const ValueKey('loading'),
+                  ? const Center(
+                      key: ValueKey('loading'),
                       child: SizedBox(
                         width: 60,
                         height: 60,
@@ -422,8 +424,7 @@ class _TaskAdderState extends State<TaskAdder> {
 
   void _validateForm() {
     setState(() {
-      _isFormValid = _title.isNotEmpty &&
-          _dueDate != null;
+      _isFormValid = _title.isNotEmpty && _dueDate != null;
     });
   }
 
