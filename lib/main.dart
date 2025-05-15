@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:splash_master/splash_master.dart';
 import 'providers/player_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/auth_service.dart';
@@ -8,8 +8,10 @@ import 'screens/main_player_screen.dart';
 import 'screens/task_manager.dart';
 import 'screens/home_screen_login.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  SplashMaster.initialize();
+  SplashMaster.resume();
   final authService = AuthService();
   final playerProvider = PlayerProvider(authService);
   final themeProvider = ThemeProvider();
@@ -67,6 +69,7 @@ class _MyAppState extends State<MyApp> {
         return MaterialApp(
           title: 'Sincronía',
           theme: themeProvider.theme,
+          debugShowCheckedModeBanner: false,
           home: _isLoading
               ? const Scaffold(
                   backgroundColor: Color(0xFF0E1928),

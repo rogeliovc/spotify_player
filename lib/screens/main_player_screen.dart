@@ -501,17 +501,17 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ShimmerLoader(height: 32, width: 180),
+                const ShimmerLoader(height: 32, width: 180),
                 const SizedBox(height: 24),
                 ShimmerLoader(
                     height: 220,
                     width: double.infinity,
                     borderRadius: BorderRadius.circular(18)),
                 const SizedBox(height: 24),
-                Row(
+                const Row(
                   children: [
                     ShimmerLoader(height: 24, width: 120),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     ShimmerLoader(height: 24, width: 80),
                   ],
                 ),
@@ -576,7 +576,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ShimmerLoader(height: 32, width: 180),
+                const ShimmerLoader(height: 32, width: 180),
                 const SizedBox(height: 24),
                 Row(
                   children: [
@@ -592,7 +592,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
                   ],
                 ),
                 const SizedBox(height: 24),
-                ShimmerLoader(height: 32, width: 180),
+                const ShimmerLoader(height: 32, width: 180),
               ],
             ),
           );
