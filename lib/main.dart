@@ -10,7 +10,6 @@ import 'screens/home_screen_login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
   final authService = AuthService();
   final playerProvider = PlayerProvider(authService);
   final themeProvider = ThemeProvider();

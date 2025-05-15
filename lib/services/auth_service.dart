@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:developer' as developer;
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -18,7 +19,7 @@ class AuthService {
   /// Borra todos los tokens y datos de sesión y fuerza re-autenticación
   Future<void> forceReauth() async {
     await signOut();
-    print(
+    developer.log(
         '[AuthService] Tokens eliminados. Debes iniciar sesión nuevamente para aceptar los nuevos permisos.');
   }
 
@@ -47,7 +48,8 @@ class AuthService {
 
   Future<void> authenticate() async {
     if (_isAuthenticating) {
-      print('[AuthService] Ya hay un proceso de autenticación en curso');
+      developer
+          .log('[AuthService] Ya hay un proceso de autenticación en curso');
       return;
     }
 
@@ -60,13 +62,13 @@ class AuthService {
       final url = Uri.parse(
           '$authUrl?response_type=code&client_id=$clientId&redirect_uri=$redirectUri&scope=${scopes.join(' ')}&code_challenge_method=S256&code_challenge=$codeChallenge');
 
-      print('[AuthService] Iniciando autenticación...');
+      developer.log('[AuthService] Iniciando autenticación...');
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         throw 'No se pudo abrir el navegador para autenticación';
       }
 
       // Esperar el callback usando app_links
-      print('[AuthService] Esperando callback...');
+      developer.log('[AuthService] Esperando callback...');
       final appLinks = AppLinks();
       final callbackUri = await appLinks.uriLinkStream
           .firstWhere(
@@ -79,17 +81,18 @@ class AuthService {
                 throw 'Tiempo de espera agotado. Por favor, intenta nuevamente.',
           );
 
-      print('[AuthService] Callback recibido: ${callbackUri.toString()}');
+      developer
+          .log('[AuthService] Callback recibido: ${callbackUri.toString()}');
       final code = callbackUri.queryParameters['code'];
       if (code == null) {
         throw 'No se recibió el código de autorización';
       }
 
-      print('[AuthService] Intercambiando código por token...');
+      developer.log('[AuthService] Intercambiando código por token...');
       await _exchangeCodeForToken(code);
-      print('[AuthService] Autenticación completada exitosamente');
+      developer.log('[AuthService] Autenticación completada exitosamente');
     } catch (e, st) {
-      print('[AuthService] Error en autenticación: $e\n$st');
+      developer.log('[AuthService] Error en autenticación: $e\n$st');
       rethrow;
     } finally {
       _isAuthenticating = false;
@@ -99,7 +102,8 @@ class AuthService {
   /// Permite intercambiar manualmente el código de autorización por tokens
   Future<void> exchangeManualCode(String code) async {
     if (_isAuthenticating) {
-      print('[AuthService] Ya hay un proceso de autenticación en curso');
+      developer
+          .log('[AuthService] Ya hay un proceso de autenticación en curso');
       return;
     }
 
@@ -109,9 +113,10 @@ class AuthService {
       if (_codeVerifier == null) {
         throw 'No se encontró el code_verifier original. Debes iniciar sesión nuevamente.';
       }
-      print('[AuthService] Intercambiando código manual por token...');
+      developer.log('[AuthService] Intercambiando código manual por token...');
       await _exchangeCodeForToken(code);
-      print('[AuthService] Intercambio de código completado exitosamente');
+      developer
+          .log('[AuthService] Intercambio de código completado exitosamente');
     } finally {
       _isAuthenticating = false;
     }
@@ -189,12 +194,12 @@ class AuthService {
                 .toString());
         return true;
       } else {
-        print(
+        developer.log(
             'Error al refrescar token: ${response.statusCode} ${response.body}');
         return false;
       }
     } catch (e) {
-      print('Error en refreshAccessToken: $e');
+      developer.log('Error en refreshAccessToken: $e');
       return false;
     }
   }
@@ -219,7 +224,7 @@ class AuthService {
     }
 
     try {
-      print('[AuthService] Enviando solicitud de token...');
+      developer.log('[AuthService] Enviando solicitud de token...');
       final response = await http.post(
         Uri.parse(tokenUrl),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -233,7 +238,7 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        print('[AuthService] Token recibido exitosamente');
+        developer.log('[AuthService] Token recibido exitosamente');
         final data = json.decode(response.body);
         await _storage.write(key: 'access_token', value: data['access_token']);
         await _storage.write(
@@ -245,12 +250,12 @@ class AuthService {
                 .toString());
       } else {
         final error = json.decode(response.body);
-        print(
+        developer.log(
             '[AuthService] Error al intercambiar código: ${error['error_description'] ?? response.body}');
         throw 'Error al intercambiar el código por token: ${error['error_description'] ?? response.body}';
       }
     } catch (e) {
-      print('[AuthService] Error en _exchangeCodeForToken: $e');
+      developer.log('[AuthService] Error en _exchangeCodeForToken: $e');
       rethrow;
     }
   }

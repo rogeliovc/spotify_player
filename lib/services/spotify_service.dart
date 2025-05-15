@@ -1,11 +1,10 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:developer' as developer;
 import '../services/auth_service.dart';
 
 class SpotifyService {
   final AuthService _authService;
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   SpotifyService(this._authService);
 
@@ -28,10 +27,11 @@ class SpotifyService {
       );
 
       if (response.statusCode != 204) {
-        throw Exception('Error al reproducir la canción: ${response.statusCode}');
+        throw Exception(
+            'Error al reproducir la canción: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error en SpotifyService.playTrack: $e');
+      developer.log('Error en SpotifyService.playTrack: $e');
       rethrow;
     }
   }
@@ -55,7 +55,7 @@ class SpotifyService {
         throw Exception('Error al pausar la canción: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error en SpotifyService.pause: $e');
+      developer.log('Error en SpotifyService.pause: $e');
       rethrow;
     }
   }
