@@ -18,7 +18,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool loading = true;
   String? error;
   bool _notificationsEnabled = true;
-  String _selectedLanguage = 'Español';
 
   @override
   void initState() {
@@ -27,7 +26,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> fetchUserInfo() async {
-    setState(() { loading = true; error = null; });
+    setState(() {
+      loading = true;
+      error = null;
+    });
     try {
       final auth = AuthService();
       final token = await auth.getAccessToken();
@@ -48,7 +50,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         });
       }
     } catch (e) {
-      setState(() { error = e.toString(); loading = false; });
+      setState(() {
+        error = e.toString();
+        loading = false;
+      });
     }
   }
 
@@ -76,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     return Scaffold(
       backgroundColor: themeProvider.theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -114,30 +119,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'Notificaciones',
               trailing: Switch(
                 value: _notificationsEnabled,
-                onChanged: (value) => setState(() => _notificationsEnabled = value),
+                onChanged: (value) =>
+                    setState(() => _notificationsEnabled = value),
                 activeColor: const Color(0xFFe0c36a),
               ),
-            ),
-            _buildPreferenceCard(
-              icon: Icons.language,
-              title: 'Idioma',
-              trailing: DropdownButton<String>(
-                value: _selectedLanguage,
-                dropdownColor: themeProvider.theme.cardColor,
-                style: TextStyle(color: themeProvider.theme.textTheme.bodyLarge?.color),
-                underline: Container(),
-                items: ['Español', 'English', 'Français'].map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    setState(() => _selectedLanguage = newValue);
-                  }
-                },
-              ),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Notificaciones'),
+                    content: const Text(
+                      'Activa las notificaciones para recibir recordatorios de tus tareas y novedades musicales personalizadas en Sincronía. Así, nunca te perderás una tarea importante ni una recomendación musical relevante.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cerrar'),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 24),
 
@@ -147,21 +149,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.privacy_tip,
               title: 'Privacidad',
               onTap: () {
-                // TODO: Implementar pantalla de privacidad
-              },
-            ),
-            _buildPreferenceCard(
-              icon: Icons.help,
-              title: 'Ayuda y Soporte',
-              onTap: () {
-                // TODO: Implementar pantalla de ayuda
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Privacidad'),
+                    content: const Text(
+                      'Sincronía utiliza la API oficial de Spotify para acceder a tu información musical y así personalizar tu experiencia y recomendaciones. Nosotros no almacenamos ni compartimos tus datos personales: toda la información se obtiene directamente de Spotify y se usa únicamente para mostrarte contenido relevante dentro de la app.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cerrar'),
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
             _buildPreferenceCard(
               icon: Icons.info,
               title: 'Acerca de',
               onTap: () {
-                // TODO: Implementar pantalla de información
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Acerca de Sincronía'),
+                    content: const Text(
+                      'Sincronía es un gestor de tareas integrado a una experiencia musical personalizada. Organiza tus pendientes, recibe recomendaciones musicales y disfruta de la productividad acompañada de tu música favorita, todo en un solo lugar.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cerrar'),
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
             const SizedBox(height: 24),
@@ -175,7 +198,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red[900],
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
