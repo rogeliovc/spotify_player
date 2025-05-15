@@ -4,6 +4,7 @@ import '../models/task_model.dart';
 import 'task_details.dart';
 
 import '../services/task_storage.dart';
+import '../services/notification_service.dart';
 
 class TaskProvider with ChangeNotifier {
   final TaskStorage _storage = TaskStorage();
@@ -35,14 +36,14 @@ class TaskProvider with ChangeNotifier {
       description: task.description,
       dueDate: task.dueDate,
       taskType: task.taskType,
-      classical: task.classical ?? 0.0,
-      lofi: task.lofi ?? 0.0,
-      electronic: task.electronic ?? 0.0,
-      jazz: task.jazz ?? 0.0,
-      rock: task.rock ?? 0.0,
-      energyLevel: task.energyLevel ?? 0.5,
-      valence: task.valence ?? 0.5,
-      tempo: task.tempo ?? 120,
+      classical: task.classical,
+      lofi: task.lofi,
+      electronic: task.electronic,
+      jazz: task.jazz,
+      rock: task.rock,
+      energyLevel: task.energyLevel,
+      valence: task.valence,
+      tempo: task.tempo,
       completed: task.completed,
     ));
     await _storage.saveTasks(_tasks);
@@ -405,23 +406,43 @@ class _TaskAdderState extends State<TaskAdder> {
   void _createTask() {
     if (_dueDate == null) return;
 
-    context.read<TaskProvider>().addTask(
-          Task(
-            title: _title,
-            description: _description,
-            dueDate: _dueDate!,
-            taskType: _taskType,
-            classical: _classical ? 1.0 : 0.0,
-            lofi: _lofi ? 1.0 : 0.0,
-            electronic: _electronic ? 1.0 : 0.0,
-            jazz: _jazz ? 1.0 : 0.0,
-            rock: _rock ? 1.0 : 0.0,
-            energyLevel: _energyLevel,
-            valence: _valence,
-            tempo: _tempo,
-          ),
-        );
-    Navigator.pop(context);
+    final newTask = Task(
+      title: _title,
+      description: _description,
+      dueDate: _dueDate!,
+      taskType: _taskType,
+      classical: _classical ? 1.0 : 0.0,
+      lofi: _lofi ? 1.0 : 0.0,
+      electronic: _electronic ? 1.0 : 0.0,
+      jazz: _jazz ? 1.0 : 0.0,
+      rock: _rock ? 1.0 : 0.0,
+      energyLevel: _energyLevel,
+      valence: _valence,
+      tempo: _tempo,
+    );
+    context.read<TaskProvider>().addTask(newTask);
+    // Notificaciones al crear tarea
+    final notificationService = NotificationService();
+    final id = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+    notificationService.showTaskCreatedNotification(
+      id: id,
+      title: newTask.title,
+      description: newTask.description,
+      dueDate: newTask.dueDate,
+    );
+    notificationService.scheduleDailyReminder(
+      id: id,
+      title: newTask.title,
+      description: newTask.description,
+      dueDate: newTask.dueDate,
+    );
+    notificationService.schedule12HoursBefore(
+      id: id,
+      title: newTask.title,
+      description: newTask.description,
+      dueDate: newTask.dueDate,
+    );
+    Navigator.of(context).pop();
   }
 
   void _validateForm() {

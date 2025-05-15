@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:splash_master/splash_master.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'providers/player_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/auth_service.dart';
@@ -8,10 +9,21 @@ import 'screens/main_player_screen.dart';
 import 'screens/task_manager.dart';
 import 'screens/home_screen_login.dart';
 
-void main() {
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SplashMaster.initialize();
   SplashMaster.resume();
+
+  // Inicialización de notificaciones locales
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
   final authService = AuthService();
   final playerProvider = PlayerProvider(authService);
   final themeProvider = ThemeProvider();
