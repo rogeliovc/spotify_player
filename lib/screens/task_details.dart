@@ -3,6 +3,7 @@ import '../models/task_model.dart';
 import '../services/auth_service.dart';
 import '../services/music_recommender.dart';
 import '../services/spotify_service.dart';
+import '../widgets/mini_player.dart';
 
 class TaskDetailsScreen extends StatelessWidget {
   final Task task;
@@ -20,7 +21,9 @@ class TaskDetailsScreen extends StatelessWidget {
             style: TextStyle(fontFamily: 'Serif', color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Padding(
+      body: Stack(
+      children: [
+        Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,7 +115,7 @@ class TaskDetailsScreen extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('Error al obtener recomendaciones: $e'),
-                        backgroundColor: Colors.red,
+                        backgroundColor: Colors.deepOrangeAccent,
                       ),
                     );
                   }
@@ -128,6 +131,12 @@ class TaskDetailsScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+        const Align(
+          alignment: Alignment.bottomCenter,
+          child: MiniPlayer(),
+        ),
+    ],
       ),
     );
   }
