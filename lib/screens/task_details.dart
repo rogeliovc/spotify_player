@@ -39,8 +39,6 @@ class TaskDetailsScreen extends StatelessWidget {
             Row(
               children: [
                 _buildTaskTypeChip(task.taskType),
-                const SizedBox(width: 8),
-                _buildEnergyLevelChip(task.energyLevel),
               ],
             ),
             const SizedBox(height: 16),
@@ -64,12 +62,6 @@ class TaskDetailsScreen extends StatelessWidget {
                 if (task.jazz > 0) _buildGenreChip('Jazz', true),
                 if (task.rock > 0) _buildGenreChip('Rock', true),
               ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Estado de ánimo: ${(task.valence * 100).round()}%',
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -134,22 +126,6 @@ class TaskDetailsScreen extends StatelessWidget {
         taskType,
         style:
             TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
-      ),
-    );
-  }
-
-  Widget _buildEnergyLevelChip(double energyLevel) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.15),
-        border: Border.all(color: Colors.green, width: 1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        'Energía: ${(energyLevel * 100).round()}%',
-        style: const TextStyle(
-            color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
       ),
     );
   }

@@ -8,9 +8,6 @@ class Task {
   final double electronic;
   final double jazz;
   final double rock;
-  final double energyLevel;
-  final double valence;
-  final int tempo;
   final bool completed;
 
   Task({
@@ -23,9 +20,6 @@ class Task {
     required this.electronic,
     required this.jazz,
     required this.rock,
-    required this.energyLevel,
-    required this.valence,
-    required this.tempo,
     this.completed = false,
   });
 
@@ -40,9 +34,6 @@ class Task {
       'electronic': electronic,
       'jazz': jazz,
       'rock': rock,
-      'energyLevel': energyLevel,
-      'valence': valence,
-      'tempo': tempo,
       'completed': completed,
     };
   }
@@ -58,9 +49,6 @@ class Task {
       electronic: json['electronic'],
       jazz: json['jazz'],
       rock: json['rock'],
-      energyLevel: json['energyLevel'],
-      valence: json['valence'],
-      tempo: json['tempo'],
       completed: json['completed'],
     );
   }

@@ -41,9 +41,6 @@ class TaskProvider with ChangeNotifier {
       electronic: task.electronic,
       jazz: task.jazz,
       rock: task.rock,
-      energyLevel: task.energyLevel,
-      valence: task.valence,
-      tempo: task.tempo,
       completed: task.completed,
     ));
     await _storage.saveTasks(_tasks);
@@ -62,9 +59,6 @@ class TaskProvider with ChangeNotifier {
       electronic: t.electronic,
       jazz: t.jazz,
       rock: t.rock,
-      energyLevel: t.energyLevel,
-      valence: t.valence,
-      tempo: t.tempo,
       completed: !t.completed,
     );
     notifyListeners();
@@ -260,8 +254,6 @@ class TaskManagerScreen extends StatelessWidget {
                                     Row(
                                       children: [
                                         _taskTypeChip(t.taskType),
-                                        const SizedBox(width: 6),
-                                        _energyLevelChip(t.energyLevel),
                                       ],
                                     ),
                                   ],
@@ -362,22 +354,6 @@ class TaskManagerScreen extends StatelessWidget {
               color: color, fontWeight: FontWeight.bold, fontSize: 13)),
     );
   }
-
-  Widget _energyLevelChip(double energyLevel) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.15),
-        border: Border.all(color: Colors.green, width: 1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        'Energía: ${(energyLevel * 100).round()}%',
-        style: const TextStyle(
-            color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
-      ),
-    );
-  }
 }
 
 class TaskAdder extends StatefulWidget {
@@ -399,9 +375,6 @@ class _TaskAdderState extends State<TaskAdder> {
   bool _jazz = false;
   bool _rock = false;
   bool _isFormValid = false;
-  final double _energyLevel = 0.5;
-  double _valence = 0.5;
-  final int _tempo = 120;
 
   void _createTask() {
     if (_dueDate == null) return;
@@ -416,9 +389,6 @@ class _TaskAdderState extends State<TaskAdder> {
       electronic: _electronic ? 1.0 : 0.0,
       jazz: _jazz ? 1.0 : 0.0,
       rock: _rock ? 1.0 : 0.0,
-      energyLevel: _energyLevel,
-      valence: _valence,
-      tempo: _tempo,
     );
     context.read<TaskProvider>().addTask(newTask);
     // Notificaciones al crear tarea
@@ -650,45 +620,7 @@ class _TaskAdderState extends State<TaskAdder> {
                 'Selecciona los géneros musicales que prefieres para tu tarea',
                 style: TextStyle(color: Colors.white70),
               ),
-              const SizedBox(height: 16),
-              const Text('¿Qué estado de ánimo prefieres?',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white12,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Slider(
-                      value: _valence,
-                      min: 0,
-                      max: 1,
-                      divisions: 10,
-                      label: '${(_valence * 100).round()}%',
-                      activeColor: Colors.blue,
-                      inactiveColor: Colors.white38,
-                      onChanged: (value) {
-                        setState(() => _valence = value);
-                      },
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Triste',
-                            style: TextStyle(color: Colors.white70)),
-                        Text('${(_valence * 100).round()}%',
-                            style: const TextStyle(color: Colors.white)),
-                        const Text('Feliz',
-                            style: TextStyle(color: Colors.white70)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isFormValid ? _createTask : null,
