@@ -27,7 +27,7 @@ class MusicRecommender {
     if (task.pop > 0) userPrefs.add('pop'); // agregado
 
     final allGenres = {
-      'classical', 'electronic', 'jazz', 'rock', 'pop'
+      'classical', 'electronic', 'lofi', 'jazz', 'rock', 'pop', 'chillhop'
     };
 
     final scores = <String, double>{};
@@ -37,6 +37,11 @@ class MusicRecommender {
       if (basePrefs.contains(genre)) score *= 2.3; // preferencia por tarea
       if (userPrefs.contains(genre)) score *= 2.5; // boost por preferencia
       scores[genre] = score;
+    }
+    // Tratar 'lofi' como 'chillhop'
+    if (scores.containsKey('lofi')) {
+      scores['chillhop'] = scores['lofi']!;
+      scores.remove('lofi');
     }
 
     return scores;
