@@ -27,7 +27,7 @@ class MusicRecommender {
     if (task.pop > 0) userPrefs.add('pop'); // agregado
 
     final allGenres = {
-      'classical', 'lofi', 'electronic', 'jazz', 'rock', 'pop'
+      'classical', 'electronic', 'jazz', 'rock', 'pop'
     };
 
     final scores = <String, double>{};

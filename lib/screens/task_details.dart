@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/task_model.dart';
+import '../services/auth_service.dart';
 import '../services/music_recommender.dart';
+import '../services/spotify_service.dart';
 
 class TaskDetailsScreen extends StatelessWidget {
   final Task task;
@@ -66,16 +68,55 @@ class TaskDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () {
-                final recommendations = MusicRecommender().recommendMusic(task);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content:
-                        Text('Recomendaciones: ${recommendations.join(', ')}'),
-                    backgroundColor: Colors.blue,
-                  ),
-                );
-              },
+                onPressed: () async {
+                  try {
+                    final authService = AuthService();
+                    final token = await authService.getAccessToken();
+                    final recommender = SpotifyService(authService);
+
+                    // Obtener géneros recomendados directamente
+                    final selectedGenres = MusicRecommender().recommendMusic(task);
+
+                    print('Token fe: $token');
+                    final songs = await recommender.fetchOnePerGenre(selectedGenres, token!);
+
+                    // Mostrar en BottomSheet
+                    if (context.mounted) {
+                      showModalBottomSheet(
+                        context: context,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        ),
+                        builder: (context) {
+                          return ListView(
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              const Text(
+                                'Recomendaciones de Spotify',
+                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 12),
+                              ...songs.map((song) => ListTile(
+                                leading: Image.network(song['image']!, width: 50, height: 50, fit: BoxFit.cover),
+                                title: Text(song['name']!),
+                                subtitle: Text(song['artist']!),
+                                trailing: const Icon(Icons.play_arrow),
+                                onTap: () => recommender.playTrack(song['id']!),
+                              )),
+                            ],
+                          );
+                        },
+                      );
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error al obtener recomendaciones: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 shape: RoundedRectangleBorder(

@@ -59,4 +59,41 @@ class SpotifyService {
       rethrow;
     }
   }
+
+  Future<List<Map<String, String>>> fetchOnePerGenre(List<String> genres, String token) async {
+    final results = <Map<String, String>>[];
+    print('Token be: $token');
+
+    for (final genre in genres.take(3)) { // Limitamos a 3 géneros más relevantes
+      final url = Uri.parse(
+        'https://api.spotify.com/v1/recommendations?limit=1&seed_genres=$genre',
+      );
+      print('URL Spotify: $url');
+
+      final response = await http.get(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      print('Authorization header: Bearer $token');
+
+      if (response.statusCode != 200) {
+        throw Exception('Error al obtener recomendaciones para $genre: ${response.statusCode}');
+      }
+
+      final data = json.decode(response.body);
+      final track = data['tracks'][0];
+
+      final song = {
+        'id': '${track['id']}',
+        'name': '${track['name']}',
+        'artist': '${track['artists'][0]['name']}',
+        'image': '${track['album']['images'][0]['url']}',
+      };
+
+      results.add(song);
+    }
+
+    return results;
+  }
+
 }
