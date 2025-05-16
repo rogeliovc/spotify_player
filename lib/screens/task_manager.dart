@@ -41,6 +41,7 @@ class TaskProvider with ChangeNotifier {
       electronic: task.electronic,
       jazz: task.jazz,
       rock: task.rock,
+      pop: task.pop,
       completed: task.completed,
     ));
     await _storage.saveTasks(_tasks);
@@ -59,6 +60,7 @@ class TaskProvider with ChangeNotifier {
       electronic: t.electronic,
       jazz: t.jazz,
       rock: t.rock,
+      pop: t.pop,
       completed: !t.completed,
     );
     notifyListeners();
@@ -321,7 +323,7 @@ class TaskManagerScreen extends StatelessWidget {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  Widget _taskTypeChip(String taskType) {
+  Widget _taskTypeChip(String taskType) { // uwu
     Color color;
     switch (taskType) {
       case 'study':
@@ -374,6 +376,7 @@ class _TaskAdderState extends State<TaskAdder> {
   bool _electronic = false;
   bool _jazz = false;
   bool _rock = false;
+  bool _pop = false;
   bool _isFormValid = false;
 
   void _createTask() {
@@ -389,6 +392,7 @@ class _TaskAdderState extends State<TaskAdder> {
       electronic: _electronic ? 1.0 : 0.0,
       jazz: _jazz ? 1.0 : 0.0,
       rock: _rock ? 1.0 : 0.0,
+      pop: _pop ? 1.0 : 0.0,
     );
     context.read<TaskProvider>().addTask(newTask);
     // Notificaciones al crear tarea
@@ -421,12 +425,15 @@ class _TaskAdderState extends State<TaskAdder> {
     });
   }
 
-  final List<String> _taskTypes = [
+  final List<String> _taskTypes = [ //uwu
     'Investigación',
     'Estudio',
     'Ejercicio',
-    'Viaje',
-    'Trabajo'
+    'Trabajo',
+    'Salud',
+    'Creatividad',
+    'Eventos',
+    'Organización'
   ];
 
   String _dueDateText(DateTime? date) {
@@ -612,6 +619,13 @@ class _TaskAdderState extends State<TaskAdder> {
                               _rock = value;
                               _validateForm();
                             })),
+                    _buildGenreChip(
+                        'Pop',
+                        _pop,
+                            (value) => setState(() {
+                          _pop = value;
+                          _validateForm();
+                        })),
                   ],
                 ),
               ),

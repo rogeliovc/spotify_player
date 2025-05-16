@@ -61,6 +61,7 @@ class TaskDetailsScreen extends StatelessWidget {
                 if (task.electronic > 0) _buildGenreChip('Electrónica', true),
                 if (task.jazz > 0) _buildGenreChip('Jazz', true),
                 if (task.rock > 0) _buildGenreChip('Rock', true),
+                if (task.pop > 0) _buildGenreChip('Pop', true),
               ],
             ),
             const SizedBox(height: 16),
@@ -106,11 +107,20 @@ class TaskDetailsScreen extends StatelessWidget {
       case 'Ejercicio':
         color = Colors.orange;
         break;
-      case 'Viaje':
-        color = Colors.purple;
-        break;
       case 'Trabajo':
         color = Colors.teal;
+        break;
+      case 'Salud':
+        color = Colors.pink;
+        break;
+      case 'Creatividad':
+        color = Colors.purple;
+        break;
+      case 'Eventos':
+        color = Colors.redAccent;
+        break;
+      case 'Organización':
+        color = Colors.indigo;
         break;
       default:
         color = Colors.grey;
