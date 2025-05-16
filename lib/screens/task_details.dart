@@ -78,7 +78,7 @@ class TaskDetailsScreen extends StatelessWidget {
                     final selectedGenres = MusicRecommender().recommendMusic(task);
 
                     print('Token fe: $token');
-                    final songs = await recommender.fetchOnePerGenre(selectedGenres, token!);
+                    final songs = await recommender.fetchSongsByGenre(selectedGenres, token!);
 
                     // Mostrar en BottomSheet
                     if (context.mounted) {
