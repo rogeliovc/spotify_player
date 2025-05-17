@@ -28,6 +28,14 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
   int _selectedTab = 1; // 0: Player, 1: Home, 2: Tasks
   int _lastTab = 1;
   final bool _calendarLoading = false;
+  Key _playlistRefreshKey = UniqueKey(); // <-- NUEVO
+
+  // NUEVO: función para refrescar playlists
+  void refreshPlaylists() {
+    setState(() {
+      _playlistRefreshKey = UniqueKey();
+    });
+  }
 
   @override
   void initState() {
@@ -230,8 +238,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
-                decoration: const InputDecoration(labelText: 'Nombre'),
-                onChanged: (v) => playlistName = v,
+                  decoration: const InputDecoration(labelText: 'Nombre'),
+                  onChanged: (v) => playlistName = v,
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
                       return 'Escribe un nombre';
@@ -243,8 +251,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
                       return 'Solo letras, números y - _ . , ! ?';
                     }
                     return null;
-                  }
-              ),
+                  }),
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Descripción'),
                 onChanged: (v) => playlistDesc = v,
@@ -489,9 +496,9 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
             ),
           ),
           // MiniPlayer siempre visible, pegado al fondo
-          const Align(
+          Align(
             alignment: Alignment.bottomCenter,
-            child: MiniPlayer(),
+            child: MiniPlayer(onRequestPlaylistRefresh: refreshPlaylists),
           ),
         ],
       ),
@@ -1384,6 +1391,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
       getNewReleasesFuture: _getNewReleasesFuture,
       getUserPlaylistsFuture: _getUserPlaylistsFuture,
       buildPlaylistCard: _buildPlaylistCard,
+      playlistRefreshKey: _playlistRefreshKey, // <-- PASA LA KEY
+      onRequestPlaylistRefresh: refreshPlaylists, // <-- PASA CALLBACK
     );
   }
 }
@@ -1397,6 +1406,8 @@ class _SpotifyGlobalSearchPlayerContent extends StatefulWidget {
   final Future<List<SpotifyTrack>> Function() getNewReleasesFuture;
   final Future<List<SpotifyTrack>> Function() getUserPlaylistsFuture;
   final Widget Function(SpotifyTrack) buildPlaylistCard;
+  final Key playlistRefreshKey;
+  final VoidCallback onRequestPlaylistRefresh;
 
   const _SpotifyGlobalSearchPlayerContent({
     required this.buildSectionTitle,
@@ -1407,6 +1418,8 @@ class _SpotifyGlobalSearchPlayerContent extends StatefulWidget {
     required this.getNewReleasesFuture,
     required this.getUserPlaylistsFuture,
     required this.buildPlaylistCard,
+    required this.playlistRefreshKey,
+    required this.onRequestPlaylistRefresh,
     Key? key,
   }) : super(key: key);
 
@@ -1534,6 +1547,7 @@ class _SpotifyGlobalSearchPlayerContentState
           SliverToBoxAdapter(child: widget.buildSectionTitle('Tus playlists')),
           SliverToBoxAdapter(
             child: FutureBuilder<List<SpotifyTrack>>(
+              key: widget.playlistRefreshKey,
               future: widget.getUserPlaylistsFuture(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {

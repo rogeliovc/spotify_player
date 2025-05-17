@@ -9,7 +9,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class MiniPlayer extends StatefulWidget {
-  const MiniPlayer({super.key});
+  final VoidCallback? onRequestPlaylistRefresh; // NUEVO
+  const MiniPlayer({super.key, this.onRequestPlaylistRefresh});
 
   @override
   State<MiniPlayer> createState() => _MiniPlayerState();
@@ -130,6 +131,36 @@ class _MiniPlayerState extends State<MiniPlayer> {
     }
   }
 
+  // Todas las las funciones privadas deben estar aquí dentro
+  Future<void> _deletePlaylist(BuildContext context, String playlistId) async {
+    final auth = AuthService();
+    final token = await auth.getAccessToken();
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay sesión activa de Spotify.')),
+      );
+      return;
+    }
+    final url =
+        Uri.parse('https://api.spotify.com/v1/playlists/$playlistId/followers');
+    final response = await http.delete(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Playlist eliminada exitosamente.')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al eliminar playlist: ${response.body}')),
+      );
+    }
+  }
+
   void _onAddToPlaylistPressed(BuildContext context, String trackUri) async {
     try {
       final playlists = await _fetchUserPlaylists(context);
@@ -173,6 +204,104 @@ class _MiniPlayerState extends State<MiniPlayer> {
     }
   }
 
+  void _onManagePlaylistsPressed(BuildContext context) async {
+    final onRefresh = widget.onRequestPlaylistRefresh;
+    try {
+      await showDialog(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (context, setState) {
+            return FutureBuilder<List<Map<String, dynamic>>>(
+              future: _fetchUserPlaylists(context),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const AlertDialog(
+                    title: Text('Tus playlists'),
+                    content: SizedBox(
+                      height: 100,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return AlertDialog(
+                    title: const Text('Tus playlists'),
+                    content: Text('Error: \n${snapshot.error}'),
+                  );
+                }
+                final playlists = snapshot.data ?? [];
+                if (playlists.isEmpty) {
+                  return const AlertDialog(
+                    title: Text('Tus playlists'),
+                    content: Text('No tienes playlists disponibles'),
+                  );
+                }
+                return AlertDialog(
+                  title: const Text('Tus playlists'),
+                  content: SizedBox(
+                    width: double.maxFinite,
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: playlists.length,
+                      itemBuilder: (context, index) {
+                        final pl = playlists[index];
+                        return ListTile(
+                          title: Text(pl['name'] ?? ''),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            tooltip: 'Eliminar playlist',
+                            onPressed: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx2) => AlertDialog(
+                                  title: const Text('¿Eliminar playlist?'),
+                                  content: Text(
+                                      '¿Seguro que deseas eliminar "${pl['name']}"?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(ctx2).pop(false),
+                                      child: const Text('Cancelar'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () =>
+                                          Navigator.of(ctx2).pop(true),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Eliminar'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirm == true) {
+                                await _deletePlaylist(context, pl['id']);
+                                setState(
+                                    () {}); // Recarga la lista tras eliminar
+                                if (onRefresh != null) {
+                                  onRefresh();
+                                }
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
   void _expandSheet() {
     showModalBottomSheet(
       context: context,
@@ -187,6 +316,9 @@ class _MiniPlayerState extends State<MiniPlayer> {
           scrollController: scrollController,
           onAddToPlaylistPressed: (trackUri) {
             _onAddToPlaylistPressed(context, trackUri);
+          },
+          onManagePlaylistsPressed: (ctx) {
+            _onManagePlaylistsPressed(ctx);
           },
         ),
       ),
@@ -212,6 +344,9 @@ class _MiniPlayerState extends State<MiniPlayer> {
                   final trackUri = 'spotify:track:${song.id}';
                   _onAddToPlaylistPressed(context, trackUri);
                 },
+                onManagePlaylistsPressed: () {
+                  _onManagePlaylistsPressed(context);
+                },
               ),
             ),
           ),
@@ -224,11 +359,13 @@ class _MiniPlayerState extends State<MiniPlayer> {
 class _MiniPlayerWidget extends StatelessWidget {
   final Color? dominantColor;
   final VoidCallback onAddToPlaylistPressed;
+  final VoidCallback onManagePlaylistsPressed;
 
   const _MiniPlayerWidget({
     Key? key,
     this.dominantColor,
     required this.onAddToPlaylistPressed,
+    required this.onManagePlaylistsPressed,
   }) : super(key: key);
 
   @override
@@ -320,6 +457,12 @@ class _MiniPlayerWidget extends StatelessWidget {
                 tooltip: 'Agregar a playlist',
                 onPressed: onAddToPlaylistPressed,
               ),
+              IconButton(
+                icon:
+                    const Icon(Icons.playlist_remove, color: Color(0xFFe0c36a)),
+                tooltip: 'Gestionar playlists',
+                onPressed: onManagePlaylistsPressed,
+              ),
             ],
           ),
         );
@@ -357,10 +500,12 @@ class _PlaylistSearchState extends InheritedWidget {
 class _ExpandedPlayer extends StatelessWidget {
   final ScrollController scrollController;
   final void Function(String trackUri) onAddToPlaylistPressed;
+  final void Function(BuildContext context) onManagePlaylistsPressed;
 
   const _ExpandedPlayer({
     required this.scrollController,
     required this.onAddToPlaylistPressed,
+    required this.onManagePlaylistsPressed,
   });
 
   void _showPlaylist(BuildContext context, PlayerProvider player) {
@@ -713,107 +858,5 @@ class _ExpandedPlayer extends StatelessWidget {
     final minutes = twoDigits(d.inMinutes.remainder(60));
     final seconds = twoDigits(d.inSeconds.remainder(60));
     return '$minutes:$seconds';
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchUserPlaylists(
-      BuildContext context) async {
-    final auth = AuthService();
-    final token = await auth.getAccessToken();
-    if (token == null) throw 'No se encontró el token de sesión de Spotify.';
-    final url = Uri.parse('https://api.spotify.com/v1/me/playlists?limit=50');
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-    );
-    if (response.statusCode != 200) {
-      throw 'Error al obtener playlists: ${response.body}';
-    }
-    final data = json.decode(response.body);
-    final items = data['items'] as List<dynamic>;
-    return items
-        .map((item) => {
-              'id': item['id'],
-              'name': item['name'],
-            })
-        .toList();
-  }
-
-  Future<void> _addTrackToPlaylist(
-      BuildContext context, String playlistId, String trackUri) async {
-    final auth = AuthService();
-    final token = await auth.getAccessToken();
-    if (token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No hay sesión activa de Spotify.')),
-      );
-      return;
-    }
-    final url =
-        Uri.parse('https://api.spotify.com/v1/playlists/$playlistId/tracks');
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: json.encode({
-        'uris': [trackUri]
-      }),
-    );
-    if (response.statusCode == 201) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Canción agregada a la playlist')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al agregar canción: ${response.body}')),
-      );
-    }
-  }
-
-  void _onAddToPlaylistPressed(BuildContext context, String trackUri) async {
-    try {
-      final playlists = await _fetchUserPlaylists(context);
-      if (playlists.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No tienes playlists disponibles')),
-        );
-        return;
-      }
-      String? selectedId;
-      await showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Agregar a playlist'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: playlists.length,
-              itemBuilder: (context, index) {
-                final pl = playlists[index];
-                return ListTile(
-                  title: Text(pl['name']),
-                  onTap: () {
-                    selectedId = pl['id'];
-                    Navigator.of(context).pop();
-                  },
-                );
-              },
-            ),
-          ),
-        ),
-      );
-      if (selectedId != null) {
-        await _addTrackToPlaylist(context, selectedId!, trackUri);
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-    }
   }
 }
