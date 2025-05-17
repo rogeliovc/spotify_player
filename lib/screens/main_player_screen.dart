@@ -232,9 +232,18 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Nombre'),
                 onChanged: (v) => playlistName = v,
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Escribe un nombre'
-                    : null,
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Escribe un nombre';
+                    }
+                    if (v.length > 100) {
+                      return 'Máximo 100 caracteres';
+                    }
+                    if (!RegExp(r'^[a-zA-Z0-9\s\-_.,!?]+$').hasMatch(v)) {
+                      return 'Solo letras, números y - _ . , ! ?';
+                    }
+                    return null;
+                  }
               ),
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Descripción'),
