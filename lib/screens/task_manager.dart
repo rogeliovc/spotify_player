@@ -326,20 +326,29 @@ class TaskManagerScreen extends StatelessWidget {
   Widget _taskTypeChip(String taskType) { // uwu
     Color color;
     switch (taskType) {
-      case 'study':
+      case 'Investigación':
         color = Colors.blue;
         break;
-      case 'exercise':
+      case 'Estudio':
         color = Colors.green;
         break;
-      case 'relax':
-        color = Colors.purple;
-        break;
-      case 'creative':
+      case 'Ejercicio':
         color = Colors.orange;
         break;
-      case 'work':
+      case 'Trabajo':
         color = Colors.teal;
+        break;
+      case 'Salud':
+        color = Colors.pink;
+        break;
+      case 'Creatividad':
+        color = Colors.purple;
+        break;
+      case 'Eventos':
+        color = Colors.redAccent;
+        break;
+      case 'Organización':
+        color = Colors.indigo;
         break;
       default:
         color = Colors.grey;
@@ -371,6 +380,7 @@ class _TaskAdderState extends State<TaskAdder> {
   String _description = '';
   DateTime? _dueDate;
   String _taskType = 'Investigación';
+  String? _customTaskType;
   bool _classical = false;
   bool _lofi = false;
   bool _electronic = false;
@@ -381,12 +391,13 @@ class _TaskAdderState extends State<TaskAdder> {
 
   void _createTask() {
     if (_dueDate == null) return;
+    String finalTaskType = _taskType == 'Otra' ? (_customTaskType ?? 'Otra') : _taskType;
 
     final newTask = Task(
       title: _title,
       description: _description,
       dueDate: _dueDate!,
-      taskType: _taskType,
+      taskType: finalTaskType,
       classical: _classical ? 1.0 : 0.0,
       lofi: _lofi ? 1.0 : 0.0,
       electronic: _electronic ? 1.0 : 0.0,
@@ -433,7 +444,8 @@ class _TaskAdderState extends State<TaskAdder> {
     'Salud',
     'Creatividad',
     'Eventos',
-    'Organización'
+    'Organización',
+    'Otra'
   ];
 
   String _dueDateText(DateTime? date) {
@@ -519,32 +531,54 @@ class _TaskAdderState extends State<TaskAdder> {
                   style: TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white12,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: DropdownButtonFormField<String>(
-                  value: _taskType,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                  ),
-                  items: _taskTypes.map((type) {
-                    return DropdownMenuItem(
-                      value: type,
-                      child: Text(
-                        type,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() => _taskType = value!);
-                    _validateForm();
-                  },
-                ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.white12,
+                borderRadius: BorderRadius.circular(12),
               ),
+              child: DropdownButtonFormField<String>(
+                value: _taskType,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                ),
+                items: _taskTypes.map((type) {
+                  return DropdownMenuItem(
+                    value: type,
+                    child: Text(
+                      type,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _taskType = value!;
+                    if (_taskType != 'Otra') _customTaskType = null;
+                  });
+                  _validateForm();
+                },
+              ),
+            ),
+            if (_taskType == 'Otra') ...[
+          const SizedBox(height: 8),
+        TextFormField(
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: 'Especifica tu tipo de tarea',
+            hintStyle: const TextStyle(color: Colors.white54),
+            filled: true,
+            fillColor: Colors.white12,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          onChanged: (value) {
+            setState(() => _customTaskType = value);
+          },
+        ),
+        ],
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () async {
