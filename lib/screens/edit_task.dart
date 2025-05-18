@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:spotify_player/screens/task_manager.dart';
 import '../models/task_model.dart';
+import '../services/notification_service.dart';
 
 class EditTaskScreen extends StatefulWidget {
   final Task task;
@@ -16,6 +19,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   late String _title;
   late String _description;
   late String _taskType;
+  late TextEditingController _customTaskTypeController;
   String? _customTaskType;
   DateTime? _dueDate;
 
@@ -37,8 +41,17 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     // Inicializa con valores de la tarea
     _title = task.title;
     _description = task.description;
-    _taskType = task.taskType;
     _dueDate = task.dueDate;
+
+    // Verifica si el tipo está en la lista
+    if (_taskTypes.contains(task.taskType)) {
+      _taskType = task.taskType;
+    } else {
+      _taskType = 'Otra';
+      _customTaskType = task.taskType; // Aquí se guarda el tipo original
+    }
+
+    _customTaskTypeController = TextEditingController(text: _customTaskType);
 
     _classical = task.classical > 0;
     _lofi = task.lofi > 0;
@@ -57,11 +70,12 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
   void _updateTask() {
     if (_formKey.currentState!.validate()) {
-      // Por ejemplo:
+      String finalTaskType = _taskType == 'Otra' ? (_customTaskType ?? 'Otra') : _taskType;
+
       final updatedTask = widget.task.copyWith(
         title: _title,
         description: _description,
-        taskType: _taskType,
+        taskType: finalTaskType,
         dueDate: _dueDate,
         classical: _classical ? 1 : 0,
         lofi: _lofi ? 1 : 0,
@@ -75,6 +89,52 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       Navigator.pop(context, updatedTask);
     }
   }
+
+  void _eliminarTareasCompletadas(BuildContext context) {
+    Provider.of<TaskProvider>(context, listen: false).removeCompletedTasks();
+  }
+
+  void _createTask() {
+    if (_dueDate == null) return;
+    String finalTaskType = _taskType == 'Otra' ? (_customTaskType ?? 'Otra') : _taskType;
+
+    final newTask = Task(
+      title: _title,
+      description: _description,
+      dueDate: _dueDate!,
+      taskType: finalTaskType,
+      classical: _classical ? 1.0 : 0.0,
+      lofi: _lofi ? 1.0 : 0.0,
+      electronic: _electronic ? 1.0 : 0.0,
+      jazz: _jazz ? 1.0 : 0.0,
+      rock: _rock ? 1.0 : 0.0,
+      pop: _pop ? 1.0 : 0.0,
+    );
+    context.read<TaskProvider>().addTask(newTask);
+    // Notificaciones al crear tarea
+    final notificationService = NotificationService();
+    final id = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+    notificationService.showTaskCreatedNotification(
+      id: id,
+      title: newTask.title,
+      description: newTask.description,
+      dueDate: newTask.dueDate,
+    );
+    notificationService.scheduleDailyReminder(
+      id: id,
+      title: newTask.title,
+      description: newTask.description,
+      dueDate: newTask.dueDate,
+    );
+    notificationService.schedule12HoursBefore(
+      id: id,
+      title: newTask.title,
+      description: newTask.description,
+      dueDate: newTask.dueDate,
+    );
+    Navigator.of(context).pop();
+  }
+
 
   final List<String> _taskTypes = [ //uwu
     'Investigación',
@@ -111,6 +171,26 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Consumer<TaskProvider>(
+      builder: (context, taskProvider, child) {
+        return ListView.builder(
+          itemCount: taskProvider.tasks.length,
+          itemBuilder: (context, index) {
+            final task = taskProvider.tasks[index];
+            return ListTile(
+              title: Text(task.title),
+              subtitle: Text(task.description),
+              trailing: Checkbox(
+                value: task.completed,
+                onChanged: (bool? value) {
+                  taskProvider.toggleTaskCompleted(index);
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
     return Scaffold(
       backgroundColor: const Color(0xFF0E1928),
       appBar: AppBar(
@@ -204,7 +284,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               if (_taskType == 'Otra') ...[
                 const SizedBox(height: 8),
                 TextFormField(
-                  initialValue: _customTaskType,
+                  controller: _customTaskTypeController,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Especifica tu tipo de tarea',
@@ -220,14 +300,17 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                     setState(() => _customTaskType = value);
                   },
                 ),
-              ],
+              ]
+,
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () async {
                   final dueDate = await showDatePicker(
                     context: context,
                     initialDate: _dueDate ?? DateTime.now(),
-                    firstDate: DateTime.now(),
+                    firstDate: _dueDate != null && _dueDate!.isBefore(DateTime.now())
+                        ? _dueDate!
+                        : DateTime.now(),
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                   );
                   if (dueDate != null) {
