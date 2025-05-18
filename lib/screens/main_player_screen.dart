@@ -409,10 +409,6 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
             tooltip: 'Mostrar dispositivos',
             onPressed: () => showDevicesDialog(context),
           ),
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white70),
-            onPressed: () {},
-          ),
         ],
       ),
       body: Stack(
