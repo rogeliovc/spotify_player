@@ -25,6 +25,34 @@ class Task {
     this.completed = false,
   });
 
+  Task copyWith({
+    String? title,
+    String? description,
+    DateTime? dueDate,
+    String? taskType,
+    double? classical,
+    double? lofi,
+    double? electronic,
+    double? jazz,
+    double? rock,
+    double? pop,
+    bool? completed,
+  }) {
+    return Task(
+      title: title ?? this.title,
+      description: description ?? this.description,
+      dueDate: dueDate ?? this.dueDate,
+      taskType: taskType ?? this.taskType,
+      classical: classical ?? this.classical,
+      lofi: lofi ?? this.lofi,
+      electronic: electronic ?? this.electronic,
+      jazz: jazz ?? this.jazz,
+      rock: rock ?? this.rock,
+      pop: pop ?? this.pop,
+      completed: completed ?? this.completed,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'title': title,

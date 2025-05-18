@@ -73,8 +73,15 @@ class TaskProvider with ChangeNotifier {
   }
 }
 
-class TaskManagerScreen extends StatelessWidget {
+class TaskManagerScreen extends StatefulWidget {
   const TaskManagerScreen({Key? key}) : super(key: key);
+
+  @override
+  _TaskManagerScreenState createState() => _TaskManagerScreenState();
+}
+
+class _TaskManagerScreenState extends State<TaskManagerScreen> {
+  List<Task> tasks = []; // Aquí debería estar tu lista de tareas
 
   Future<void> _confirmCompleteTask(BuildContext context, int i,
       TaskProvider taskProvider, bool completed) async {
@@ -278,18 +285,27 @@ class TaskManagerScreen extends StatelessWidget {
                                           taskProvider,
                                           t.completed),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.info_outline,
-                                          color: Colors.white70),
-                                      onPressed: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (_) =>
-                                                TaskDetailsScreen(task: t),
-                                          ),
-                                        );
-                                      },
+                              IconButton(
+                                icon: const Icon(Icons.info_outline, color: Colors.white70),
+                                onPressed: () async {
+                                  final updatedTask = await Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => TaskDetailsScreen(task: t),
                                     ),
+                                  );
+
+                                  if (updatedTask != null && updatedTask is Task) {
+                                    setState(() {
+                                      // Actualizas la tarea en la lista
+                                      final index = tasks.indexWhere((task) => task.title == t.title); // Usa un identificador único si tienes
+                                      if (index != -1) {
+                                        tasks[index] = updatedTask;
+                                      }
+                                    });
+                                  }
+                                },
+                              ),
+
                                   ],
                                 ),
                               ),

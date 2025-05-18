@@ -4,19 +4,59 @@ import '../services/auth_service.dart';
 import '../services/music_recommender.dart';
 import '../services/spotify_service.dart';
 import '../widgets/mini_player.dart';
+import 'edit_task.dart';
 
-class TaskDetailsScreen extends StatelessWidget {
+class TaskDetailsScreen extends StatefulWidget{
   final Task task;
 
   const TaskDetailsScreen({Key? key, required this.task}) : super(key: key);
 
   @override
+  _TaskDetailsScreenState createState() => _TaskDetailsScreenState();
+}
+
+class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
+  late Task task;
+
+  @override
+  void initState() {
+    super.initState();
+    task = widget.task;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: true, // Permite que la pantalla se cierre
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (!didPop) {
+          Navigator.pop(context, task); // Devuelve la tarea actualizada solo si no se hizo pop automático
+        }
+      },
+    child: Scaffold(
       backgroundColor: const Color(0xFF0E1928),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () async {
+              final updatedTask = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditTaskScreen(task: task),
+                ),
+              );
+
+              if (updatedTask != null && updatedTask is Task) {
+                setState(() {
+                  task = updatedTask; // Aquí se actualiza la tarea con los nuevos valores
+                });
+              }
+            },
+          ),
+        ],
         title: const Text('Detalles de Tarea',
             style: TextStyle(fontFamily: 'Serif', color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -132,12 +172,9 @@ class TaskDetailsScreen extends StatelessWidget {
           ],
         ),
       ),
-        const Align(
-          alignment: Alignment.bottomCenter,
-          child: MiniPlayer(),
-        ),
     ],
       ),
+    ),
     );
   }
 
@@ -173,7 +210,7 @@ class TaskDetailsScreen extends StatelessWidget {
         color = Colors.indigo;
         break;
       default:
-        color = Colors.grey;
+        color = Color(0xFF90A4AE);
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
