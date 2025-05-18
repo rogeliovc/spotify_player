@@ -646,16 +646,16 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.07),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
@@ -671,7 +671,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
                     }
                   }
                   return TableCalendar(
-                    rowHeight: 54,
+                    rowHeight: 50,
                     firstDay: DateTime.utc(2020, 1, 1),
                     lastDay: DateTime.utc(2030, 12, 31),
                     focusedDay: _focusedDay,
@@ -688,24 +688,39 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
                       return taskEvents[key] ?? [];
                     },
                     calendarStyle: CalendarStyle(
-                      defaultTextStyle: const TextStyle(color: Colors.black87),
-                      weekendTextStyle: const TextStyle(color: Colors.blueGrey),
-                      outsideTextStyle: const TextStyle(color: Colors.black26),
+                      isTodayHighlighted: true,
+                      defaultTextStyle: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                        fontSize: 16,
+                      ),
+                      weekendTextStyle: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.8),
+                        fontSize: 16,
+                      ),
+                      outsideTextStyle: TextStyle(
+                        color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.3),
+                        fontSize: 16,
+                      ),
                       todayDecoration: BoxDecoration(
-                        color: Colors.blue.shade100,
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      todayTextStyle: const TextStyle(
-                          color: Colors.blue, fontWeight: FontWeight.bold),
-                      selectedDecoration: const BoxDecoration(
-                        color: Colors.blue,
+                      todayTextStyle: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                      selectedDecoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor,
                         shape: BoxShape.circle,
                       ),
                       selectedTextStyle: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold),
-                      disabledTextStyle: const TextStyle(color: Colors.grey),
-                      markerDecoration: const BoxDecoration(
-                        color: Colors.blueAccent,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                      markerDecoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor,
                         shape: BoxShape.circle,
                       ),
                       markersMaxCount: 1,
@@ -721,10 +736,10 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
                             right: 0,
                             child: Center(
                               child: Container(
-                                width: 7,
-                                height: 7,
-                                decoration: const BoxDecoration(
-                                  color: Colors.blueAccent,
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).primaryColor,
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -734,24 +749,34 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
                         return null;
                       },
                     ),
-                    headerStyle: const HeaderStyle(
+                    headerStyle: HeaderStyle(
                       formatButtonVisible: false,
                       titleCentered: true,
                       titleTextStyle: TextStyle(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                        color: Theme.of(context).textTheme.titleLarge?.color,
+                        fontSize: 20,
                       ),
-                      leftChevronIcon:
-                          Icon(Icons.chevron_left, color: Colors.black87),
-                      rightChevronIcon:
-                          Icon(Icons.chevron_right, color: Colors.black87),
+                      leftChevronIcon: Icon(
+                        Icons.chevron_left,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
+                      rightChevronIcon: Icon(
+                        Icons.chevron_right,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
+                      headerMargin: const EdgeInsets.only(bottom: 16),
                     ),
-                    daysOfWeekStyle: const DaysOfWeekStyle(
+                    daysOfWeekStyle: DaysOfWeekStyle(
                       weekdayStyle: TextStyle(
-                          color: Colors.black54, fontWeight: FontWeight.w600),
+                        color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.7),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                       weekendStyle: TextStyle(
-                          color: Colors.blueGrey, fontWeight: FontWeight.w600),
+                        color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.5),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                   );
                 },
