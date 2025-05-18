@@ -4,6 +4,7 @@ import '../models/task_model.dart';
 import '../services/auth_service.dart';
 import '../services/music_recommender.dart';
 import '../services/spotify_service.dart';
+import 'main_player_screen.dart';
 import '../widgets/mini_player.dart';
 import 'edit_task.dart';
 import '../screens/task_manager.dart'; // Importar TaskProvider
@@ -153,7 +154,24 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                 title: Text(song['name']!),
                                 subtitle: Text(song['artist']!),
                                 trailing: const Icon(Icons.play_arrow),
-                                onTap: () => recommender.playTrack(song['id']!),
+                                onTap: () {
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(
+      builder: (_) => MainPlayerScreen(
+        initialTab: 0,
+        songData: {
+          'id': song['id'],
+          'title': song['name'],
+          'artist': song['artist'],
+          'album': song['album'] ?? '',
+          'albumArtUrl': song['image'] ?? '',
+          'durationMs': song['duration_ms'] ?? 180000,
+        },
+      ),
+    ),
+    (route) => false,
+  );
+},
                               )),
                             ],
                           );

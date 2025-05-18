@@ -9,6 +9,13 @@ import '../screens/home_screen_login.dart';
 import 'dart:async';
 
 class PlayerProvider extends ChangeNotifier {
+  // Reproduce una canción por ID si está en el playlist actual
+  static Future<void> playSongByIdStatic(PlayerProvider provider, String id) async {
+    final idx = provider.playlist.indexWhere((s) => s.id == id);
+    if (idx != -1) {
+      await provider.playSongFromList(provider.playlist, idx);
+    }
+  }
   bool isProcessing = false;
   String _accessToken = '';
   final AuthService _authService;

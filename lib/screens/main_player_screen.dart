@@ -15,7 +15,11 @@ import '../widgets/spotify_search_field.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 class MainPlayerScreen extends StatefulWidget {
-  const MainPlayerScreen({super.key});
+  final int? initialTab;
+  final String? initialSongId;
+  final Map<String, dynamic>? songData;
+
+  const MainPlayerScreen({Key? key, this.initialTab, this.initialSongId, this.songData}) : super(key: key);
 
   @override
   State<MainPlayerScreen> createState() => _MainPlayerScreenState();
@@ -41,6 +45,26 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Cambia el tab si se provee initialTab
+    if (widget.initialTab != null) {
+      _selectedTab = widget.initialTab!;
+    }
+    // Reproduce la canción si se provee initialSongId
+    final playerProvider = Provider.of<PlayerProvider>(context, listen: false);
+    if (widget.songData != null) {
+      // Construir Song y reproducir
+      final song = Song(
+        id: widget.songData!['id'] ?? '',
+        title: widget.songData!['title'] ?? '',
+        artist: widget.songData!['artist'] ?? '',
+        album: widget.songData!['album'] ?? '',
+        albumArtUrl: widget.songData!['albumArtUrl'] ?? '',
+        durationMs: widget.songData!['durationMs'] ?? 180000,
+      );
+      playerProvider.playSong(song);
+    } else if (widget.initialSongId != null) {
+      PlayerProvider.playSongByIdStatic(playerProvider, widget.initialSongId!);
+    }
   }
 
   @override
