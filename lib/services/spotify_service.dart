@@ -63,7 +63,6 @@ class SpotifyService {
   Future<List<Map<String, String>>> fetchSongsByGenre(List<String> genres, String token) async {
     final results = <Map<String, String>>[];
     final seenIds = <String>{}; // Para evitar canciones repetidas
-    print('Token be: $token');
 
     for (final genre in genres.take(3)) {
       int fetched = 0;
@@ -77,7 +76,6 @@ class SpotifyService {
           url,
           headers: {'Authorization': 'Bearer $token'},
         );
-        print('Authorization header: Bearer $token');
 
         if (response.statusCode != 200) {
           throw Exception('Error al buscar canciones para $genre: ${response.statusCode}');
@@ -87,7 +85,6 @@ class SpotifyService {
         final tracks = data['tracks']['items'];
 
         if (tracks.isEmpty) {
-          print('No se encontraron más canciones para el género: $genre');
           break;
         }
 

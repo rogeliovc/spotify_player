@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:spotify_player/screens/task_manager.dart';
 import '../models/task_model.dart';
-import '../services/notification_service.dart';
 
 class EditTaskScreen extends StatefulWidget {
   final Task task;
@@ -89,52 +88,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       Navigator.pop(context, updatedTask);
     }
   }
-
-  void _eliminarTareasCompletadas(BuildContext context) {
-    Provider.of<TaskProvider>(context, listen: false).removeCompletedTasks();
-  }
-
-  void _createTask() {
-    if (_dueDate == null) return;
-    String finalTaskType = _taskType == 'Otra' ? (_customTaskType ?? 'Otra') : _taskType;
-
-    final newTask = Task(
-      title: _title,
-      description: _description,
-      dueDate: _dueDate!,
-      taskType: finalTaskType,
-      classical: _classical ? 1.0 : 0.0,
-      lofi: _lofi ? 1.0 : 0.0,
-      electronic: _electronic ? 1.0 : 0.0,
-      jazz: _jazz ? 1.0 : 0.0,
-      rock: _rock ? 1.0 : 0.0,
-      pop: _pop ? 1.0 : 0.0,
-    );
-    context.read<TaskProvider>().addTask(newTask);
-    // Notificaciones al crear tarea
-    final notificationService = NotificationService();
-    final id = DateTime.now().millisecondsSinceEpoch.remainder(100000);
-    notificationService.showTaskCreatedNotification(
-      id: id,
-      title: newTask.title,
-      description: newTask.description,
-      dueDate: newTask.dueDate,
-    );
-    notificationService.scheduleDailyReminder(
-      id: id,
-      title: newTask.title,
-      description: newTask.description,
-      dueDate: newTask.dueDate,
-    );
-    notificationService.schedule12HoursBefore(
-      id: id,
-      title: newTask.title,
-      description: newTask.description,
-      dueDate: newTask.dueDate,
-    );
-    Navigator.of(context).pop();
-  }
-
 
   final List<String> _taskTypes = [ //uwu
     'Investigación',

@@ -5,7 +5,6 @@ import '../services/auth_service.dart';
 import '../services/music_recommender.dart';
 import '../services/spotify_service.dart';
 import 'main_player_screen.dart';
-import '../widgets/mini_player.dart';
 import 'edit_task.dart';
 import '../screens/task_manager.dart'; // Importar TaskProvider
 
@@ -130,7 +129,6 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     // Obtener géneros recomendados directamente
                     final selectedGenres = MusicRecommender().recommendMusic(task);
 
-                    print('Token fe: $token');
                     final songs = await recommender.fetchSongsByGenre(selectedGenres, token!);
 
                     // Mostrar en BottomSheet
