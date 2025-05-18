@@ -7,6 +7,16 @@ import '../services/task_storage.dart';
 import '../services/notification_service.dart';
 
 class TaskProvider with ChangeNotifier {
+  // ... (resto de los campos)
+
+  /// Actualiza una tarea existente en la lista y la guarda en almacenamiento persistente.
+  Future<void> updateTask(int index, Task updatedTask) async {
+    if (index >= 0 && index < _tasks.length) {
+      _tasks[index] = updatedTask;
+      await _storage.saveTasks(_tasks);
+      notifyListeners();
+    }
+  }
   final TaskStorage _storage = TaskStorage();
   final List<Task> _tasks = [];
   bool _loading = true;

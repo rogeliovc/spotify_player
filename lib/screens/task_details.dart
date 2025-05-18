@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/task_model.dart';
 import '../services/auth_service.dart';
 import '../services/music_recommender.dart';
 import '../services/spotify_service.dart';
 import '../widgets/mini_player.dart';
 import 'edit_task.dart';
+import '../screens/task_manager.dart'; // Importar TaskProvider
 
 class TaskDetailsScreen extends StatefulWidget{
   final Task task;
@@ -51,8 +53,15 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
               if (updatedTask != null && updatedTask is Task) {
                 setState(() {
-                  task = updatedTask; // Aquí se actualiza la tarea con los nuevos valores
+                  task = updatedTask; // Actualiza la tarea local
                 });
+                
+                // Actualiza el TaskProvider
+                final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+                final index = taskProvider.tasks.indexWhere((t) => t.title == task.title);
+                if (index != -1) {
+                  taskProvider.updateTask(index, updatedTask);
+                }
               }
             },
           ),
