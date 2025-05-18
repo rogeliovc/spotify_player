@@ -62,43 +62,54 @@ class SpotifyService {
 
   Future<List<Map<String, String>>> fetchSongsByGenre(List<String> genres, String token) async {
     final results = <Map<String, String>>[];
+    final seenIds = <String>{}; // Para evitar canciones repetidas
     print('Token be: $token');
 
-    for (final genre in genres.take(3)) { // Limitamos a 3 géneros más relevantes
-      final url = Uri.parse(
-        'https://api.spotify.com/v1/search?q=genre:$genre&type=track&limit=2',
-      );
-      print('URL Spotify: $url');
+    for (final genre in genres.take(3)) {
+      int fetched = 0;
+      int offset = 0;
 
-      final response = await http.get(
-        url,
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      print('Authorization header: Bearer $token');
+      while (fetched < 2) {
+        final url = Uri.parse(
+          'https://api.spotify.com/v1/search?q=genre:$genre&type=track&limit=1&offset=$offset',
+        );
+        final response = await http.get(
+          url,
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        print('Authorization header: Bearer $token');
 
-      if (response.statusCode != 200) {
-        throw Exception('Error al buscar canciones para $genre: ${response.statusCode}');
-      }
+        if (response.statusCode != 200) {
+          throw Exception('Error al buscar canciones para $genre: ${response.statusCode}');
+        }
 
-      final data = json.decode(response.body);
-      final tracks = data['tracks']['items']; // Cambia la estructura respecto al endpoint de recomendaciones
+        final data = json.decode(response.body);
+        final tracks = data['tracks']['items'];
 
-      if (tracks.isEmpty) {
-        print('No se encontraron canciones para el género: $genre');
-        continue;
-      }
+        if (tracks.isEmpty) {
+          print('No se encontraron más canciones para el género: $genre');
+          break;
+        }
 
-      for (var track in tracks) {
-        final song = {
-          'id': track['id'].toString(),
-          'name': track['name'].toString(),
-          'artist': track['artists'].isNotEmpty ? track['artists'][0]['name'].toString() : 'Unknown',
-          'image': (track['album']['images'] as List).isNotEmpty
-              ? track['album']['images'][0]['url'].toString()
-              : '',
-        };
+        final track = tracks[0];
+        final trackId = track['id'].toString();
 
-        results.add(song);
+        if (!seenIds.contains(trackId)) {
+          final song = {
+            'id': trackId,
+            'name': track['name'].toString(),
+            'artist': track['artists'].isNotEmpty ? track['artists'][0]['name'].toString() : 'Unknown',
+            'image': (track['album']['images'] as List).isNotEmpty
+                ? track['album']['images'][0]['url'].toString()
+                : '',
+          };
+
+          results.add(song);
+          seenIds.add(trackId);
+          fetched++;
+        }
+
+        offset++; // Avanzamos al siguiente resultado
       }
     }
 
