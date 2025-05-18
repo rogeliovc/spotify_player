@@ -31,7 +31,6 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
   DateTime? _selectedDay;
   int _selectedTab = 1; // 0: Player, 1: Home, 2: Tasks
   int _lastTab = 1;
-  final bool _calendarLoading = false;
   Key _playlistRefreshKey = UniqueKey(); // <-- NUEVO
 
   // NUEVO: función para refrescar playlists
