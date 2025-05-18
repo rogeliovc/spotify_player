@@ -624,6 +624,7 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
   Widget _buildCalendarOnly() {
     return SingleChildScrollView(
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -755,8 +756,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
                   ),
                 );
               }
-              return SizedBox(
-                height: 130,
+              return ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 130),
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding:
@@ -785,35 +786,44 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            task.title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 17,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Hasta: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
+                          Expanded(
+                            child: Text(
+                              task.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Text(
-                            task.description,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
+                          Expanded(
+                            child: Text(
+                              'Hasta: ${task.dueDate.day}/${task.dueDate.month}/${task.dueDate.year}',
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              task.description,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -839,8 +849,8 @@ class _MainPlayerScreenState extends State<MainPlayerScreen>
               ),
             ),
           ),
-          SizedBox(
-            height: 110,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 110),
             child: _buildHorizontalTrackList(_getRecentlyPlayedFuture()),
           ),
         ],
