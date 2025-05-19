@@ -46,6 +46,10 @@ Aplicación móvil desarrollada en Flutter que integra la API de Spotify para of
    ```bash
    flutter run
    ```
+## Acceso
+   ```
+   Si deseas utilizar la aplicacion recuerda solicitar el acceso a la api, al estar en modo beta no es publica
+   ```
 
 ## Acceso a la API
 
@@ -71,3 +75,4 @@ Este proyecto está bajo la licencia MIT. Consulta el archivo [LICENSE](LICENSE)
 ## Contacto
 
 Para más información o soporte, por favor contacta al equipo de desarrollo.
+- Recuerda tener una cuenta de spotify activa
