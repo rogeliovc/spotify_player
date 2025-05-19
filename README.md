@@ -23,8 +23,13 @@ Proyecto Flutter para reproducir música con integración a Spotify.
    ```
    flutter run
    ```
+## Acceso
+   ```
+   Si deseas utilizar la aplicacion recuerda solicitar el acceso a la api, al estar en modo beta no es publica
+   ```
 
 ## Notas
 
 - Si usas Android/iOS, asegúrate de tener un emulador o dispositivo físico conectado.
 - Si tienes problemas, corre `flutter doctor` para diagnosticar tu entorno.
+- Recuerda tener una cuenta de spotify activa
